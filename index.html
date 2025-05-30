@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shabbat Cleaning Chore Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Shabbat Cleaning Chore Manager</h1>
+            <p class="cycle-info">Current Cycle: <span id="current-cycle">Loading...</span></p>
+            <div class="header-actions">
+                <button class="btn btn--secondary" id="new-cycle-btn">Start New Cycle</button>
+                <button class="btn btn--outline" id="export-data-btn">Export All Data</button>
+                <input type="file" id="import-data-input" accept=".json" class="hidden">
+                <button class="btn btn--outline" id="import-data-btn">Import Data</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Navigation Tabs -->
+            <nav class="tab-nav">
+                <button class="tab-btn active" data-tab="chores">Current Chores</button>
+                <button class="tab-btn" data-tab="statistics">Statistics</button>
+                <button class="tab-btn" data-tab="github">GitHub Integration</button>
+                <button class="tab-btn" data-tab="history">Cycle History</button>
+            </nav>
+
+            <!-- Current Chores Tab -->
+            <section id="chores-tab" class="tab-content active">
+                <div class="chores-header">
+                    <h2>Current Bi-Weekly Assignments</h2>
+                    <div class="cycle-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <span id="progress-text">0% Complete</span>
+                    </div>
+                </div>
+
+                <div class="assignments-grid" id="assignments-grid">
+                    <!-- Assignments will be populated here -->
+                </div>
+
+                <div class="violations-section">
+                    <h3>Current Violations</h3>
+                    <div id="violations-list" class="violations-list">
+                        <!-- Violations will be populated here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics Tab -->
+            <section id="statistics-tab" class="tab-content">
+                <div class="statistics-header">
+                    <h2>Statistics Dashboard</h2>
+                    <div class="stats-actions">
+                        <button class="btn btn--primary" id="generate-stats-btn">Generate Statistics Report</button>
+                        <input type="file" id="load-stats-input" accept=".json" class="hidden">
+                        <button class="btn btn--secondary" id="load-stats-btn">Load Statistics File</button>
+                    </div>
+                </div>
+
+                <div class="stats-overview">
+                    <div class="stat-card">
+                        <h4>Overall Completion Rate</h4>
+                        <div class="stat-value" id="overall-completion">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Total Cycles</h4>
+                        <div class="stat-value" id="total-cycles">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Active Violations</h4>
+                        <div class="stat-value" id="active-violations">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Best Performer</h4>
+                        <div class="stat-value" id="best-performer">-</div>
+                    </div>
+                </div>
+
+                <div class="stats-charts">
+                    <div class="chart-container">
+                        <h3>Individual Performance</h3>
+                        <canvas id="performance-chart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Chore Completion Rates</h3>
+                        <canvas id="chore-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <div class="individual-stats" id="individual-stats">
+                    <!-- Individual statistics will be populated here -->
+                </div>
+            </section>
+
+            <!-- GitHub Integration Tab -->
+            <section id="github-tab" class="tab-content">
+                <div class="github-header">
+                    <h2>GitHub Repository Integration</h2>
+                    <p>Manage your chore statistics with version control</p>
+                </div>
+
+                <div class="github-instructions">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>📤 Upload Statistics to GitHub</h3>
+                            <ol>
+                                <li>Generate and download your statistics report</li>
+                                <li>Navigate to your GitHub repository</li>
+                                <li>Click "Add file" → "Upload files"</li>
+                                <li>Drag and drop your statistics file</li>
+                                <li>Use the suggested commit message below</li>
+                            </ol>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Suggested Commit Message:</label>
+                                <textarea class="form-control" id="commit-message" rows="2" readonly></textarea>
+                                <button class="btn btn--outline btn--sm mt-8" id="copy-commit-btn">Copy Message</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>📥 Load Statistics from GitHub</h3>
+                            <p>To load previously uploaded statistics:</p>
+                            <ol>
+                                <li>Navigate to your statistics file in GitHub</li>
+                                <li>Click "Raw" to view the raw JSON</li>
+                                <li>Save the file or copy its contents</li>
+                                <li>Use "Load Statistics File" in the Statistics tab</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>🔗 API Integration (Optional)</h3>
+                            <p>For automated uploads, use the GitHub API:</p>
+                            <pre><code>PUT /repos/{owner}/{repo}/contents/{path}
+Authorization: token {your_token}
+Content-Type: application/json
+
+{
+  "message": "Update chore statistics",
+  "content": "{base64_encoded_content}"
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cycle History Tab -->
+            <section id="history-tab" class="tab-content">
+                <div class="history-header">
+                    <h2>Cycle History</h2>
+                    <p>View past cleaning cycles and performance</p>
+                </div>
+
+                <div id="cycle-history" class="cycle-history">
+                    <!-- Cycle history will be populated here -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
