@@ -1,97 +1,99 @@
 {
   "metadata": {
-    "lastUpdated": "2025-05-30T16:48:00.000Z",
+    "lastUpdated": "2025-05-30T21:25:22.074Z",
     "version": "1.0",
-    "cycleNumber": 1,
+    "cycleNumber": 2,
     "description": "Bi-weekly chore assignments for Shabbat cleanup"
   },
   "currentCycle": {
-    "id": "cycle-2025-06-13",
-    "startDate": "2025-06-10",
-    "deadlineDate": "2025-06-13",
-    "type": "bi-weekly",
+    "id": 1748640309493,
+    "startDate": "2025-06-10T00:00:00.000Z",
+    "endDate": "2025-06-13T00:00:00.000Z",
     "assignments": [
       {
-        "person": "Oliver",
-        "chores": [
-          "Second-floor bathroom, mop floor & toilet",
-          "Ground-floor washing sink"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
-      },
-      {
-        "person": "Spencer",
-        "chores": [
-          "Sweep kitchen",
-          "Sweep living room"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
-      },
-      {
-        "person": "Ben",
-        "chores": [
-          "Ground-floor bathroom & toilet",
-          "Recycling and trash disposal (out by Thursday night)"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
-      },
-      {
-        "person": "Isaac",
-        "chores": [
-          "Vacuum kitchen",
-          "Vacuum living room"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
-      },
-      {
-        "person": "Jason",
-        "chores": [
-          "Mop down kitchen",
-          "Kitchen & dining-room tables: cloth replacement & wipe-down"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
-      },
-      {
-        "person": "Jonah",
-        "chores": [
-          "Replace foil in cooking stove",
-          "Wipe down kitchen stove, knobs, and surfaces"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
-      },
-      {
-        "person": "Nahum",
-        "chores": [
-          "General tidy-up of common spaces",
-          "Bless the home with one Psalm of choice"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
+        "person": "Adam",
+        "chore": "Replace foil in cooking stove"
       },
       {
         "person": "Adam",
-        "chores": [
-          "Vacuum stairs",
-          "Hefker sweep ground floor living room - clean up items and trash"
-        ],
-        "completed": false,
-        "violations": 0,
-        "lastCompleted": null
+        "chore": "Wipe down kitchen countertops"
+      },
+      {
+        "person": "Ben",
+        "chore": "Sweep kitchen"
+      },
+      {
+        "person": "Ben",
+        "chore": "Ground-floor bathroom & toilet"
+      },
+      {
+        "person": "Isaac",
+        "chore": "Sweep living room"
+      },
+      {
+        "person": "Isaac",
+        "chore": "Hefker sweep ground floor living room - clean up items and trash"
+      },
+      {
+        "person": "Jason",
+        "chore": "Wipe down kitchen stove, knobs, and surfaces"
+      },
+      {
+        "person": "Jason",
+        "chore": "Ground-floor washing sink"
+      },
+      {
+        "person": "Jonah",
+        "chore": "Mop down kitchen"
+      },
+      {
+        "person": "Jonah",
+        "chore": "Vacuum living room"
+      },
+      {
+        "person": "Nahum",
+        "chore": "General tidy-up of common spaces"
+      },
+      {
+        "person": "Nahum",
+        "chore": "Recycling and trash disposal (out by Thursday night)"
+      },
+      {
+        "person": "Oliver",
+        "chore": "Kitchen & dining-room tables: cloth replacement & wipe-down"
+      },
+      {
+        "person": "Oliver",
+        "chore": "Second-floor bathroom, mop floor & toilet"
+      },
+      {
+        "person": "Spencer",
+        "chore": "Vacuum kitchen"
+      },
+      {
+        "person": "Spencer",
+        "chore": "Vacuum stairs"
       }
-    ]
+    ],
+    "created": "2025-05-30T21:25:09.493Z"
+  },
+  "completions": {
+    "Adam-Replace foil in cooking stove": false,
+    "Adam-Wipe down kitchen countertops": false,
+    "Ben-Sweep kitchen": false,
+    "Ben-Ground-floor bathroom & toilet": false,
+    "Isaac-Sweep living room": false,
+    "Isaac-Hefker sweep ground floor living room - clean up items and trash": false,
+    "Jason-Wipe down kitchen stove, knobs, and surfaces": false,
+    "Jason-Ground-floor washing sink": false,
+    "Jonah-Mop down kitchen": false,
+    "Jonah-Vacuum living room": false,
+    "Nahum-General tidy-up of common spaces": false,
+    "Nahum-Recycling and trash disposal (out by Thursday night)": false,
+    "Oliver-Kitchen & dining-room tables: cloth replacement & wipe-down": false,
+    "Oliver-Second-floor bathroom, mop floor & toilet": false,
+    "Spencer-Vacuum kitchen": false,
+    "Spencer-Vacuum stairs": false
   },
   "settings": {
     "cycleLength": 14,
@@ -101,21 +103,9 @@
     "deadlineDay": "Friday",
     "timezone": "America/New_York"
   },
-  "nextCycles": [
-    {
-      "cycleNumber": 2,
-      "startDate": "2025-06-24",
-      "deadlineDate": "2025-06-27"
-    },
-    {
-      "cycleNumber": 3,
-      "startDate": "2025-07-08",
-      "deadlineDate": "2025-07-11"
-    },
-    {
-      "cycleNumber": 4,
-      "startDate": "2025-07-22",
-      "deadlineDate": "2025-07-25"
-    }
-  ]
+  "stats": {
+    "totalCycles": 1,
+    "totalViolations": 0,
+    "activeAssignments": 16
+  }
 }
