@@ -23,7 +23,7 @@ class ChoreManager {
                 "Sweep kitchen",
                 "Sweep living room",
                 "Ground-floor bathroom & toilet",
-                "Recycling and trash disposal (out by Thursday night)",
+                "Recycling and trash disposal duty (Both out by Thursday night, Tuesday trash only)",
                 "Vacuum kitchen",
                 "Vacuum living room",
                 "Mop down kitchen",
