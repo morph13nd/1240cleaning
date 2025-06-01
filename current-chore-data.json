@@ -1,8 +1,8 @@
 {
   "metadata": {
-    "lastUpdated": "2025-05-30T21:41:57.850Z",
+    "lastUpdated": "2025-05-30T21:25:22.074Z",
     "version": "1.0",
-    "cycleNumber": 1,
+    "cycleNumber": 2,
     "description": "Bi-weekly chore assignments for Shabbat cleanup"
   },
   "currentCycle": {
@@ -12,70 +12,223 @@
     "assignments": [
       {
         "person": "Adam",
-        "chore": "Replace foil in cooking stove"
+        "chore": "Replace foil in cooking stove",
+        "status": "completed",
+        "completedDate": "2025-06-12T14:23:45.000Z"
       },
       {
         "person": "Adam",
-        "chore": "Wipe down kitchen countertops"
+        "chore": "Wipe down kitchen countertops",
+        "status": "completed",
+        "completedDate": "2025-06-12T14:30:12.000Z"
       },
       {
         "person": "Ben",
-        "chore": "Sweep kitchen"
+        "chore": "Sweep kitchen",
+        "status": "completed",
+        "completedDate": "2025-06-11T18:45:00.000Z"
       },
       {
         "person": "Ben",
-        "chore": "Ground-floor bathroom & toilet"
+        "chore": "Ground-floor bathroom & toilet",
+        "status": "completed",
+        "completedDate": "2025-06-11T19:10:00.000Z"
       },
       {
         "person": "Isaac",
-        "chore": "Sweep living room"
+        "chore": "Sweep living room",
+        "status": "completed",
+        "completedDate": "2025-06-12T20:15:00.000Z"
       },
       {
         "person": "Isaac",
-        "chore": "Hefker sweep ground floor living room - clean up items and trash"
+        "chore": "Hefker sweep ground floor living room - clean up items and trash",
+        "status": "completed",
+        "completedDate": "2025-06-12T20:30:00.000Z"
       },
       {
         "person": "Jason",
-        "chore": "Wipe down kitchen stove, knobs, and surfaces"
+        "chore": "Wipe down kitchen stove, knobs, and surfaces",
+        "status": "completed",
+        "completedDate": "2025-06-10T22:15:00.000Z"
       },
       {
         "person": "Jason",
-        "chore": "Ground-floor washing sink"
+        "chore": "Ground-floor washing sink",
+        "status": "completed",
+        "completedDate": "2025-06-10T22:30:00.000Z"
       },
       {
         "person": "Jonah",
-        "chore": "Mop down kitchen"
+        "chore": "Mop down kitchen",
+        "status": "incomplete", 
+        "completedDate": null,
+        "isBacklog": false
       },
       {
         "person": "Jonah",
-        "chore": "Vacuum living room"
+        "chore": "Vacuum living room",
+        "status": "incomplete",
+        "completedDate": null,
+        "isBacklog": false
       },
       {
         "person": "Nahum",
-        "chore": "General tidy-up of common spaces"
+        "chore": "General tidy-up of common spaces",
+        "status": "completed",
+        "completedDate": "2025-06-11T17:45:00.000Z"
       },
       {
         "person": "Nahum",
-        "chore": "Recycling and trash disposal (out by Thursday night)"
+        "chore": "Recycling and trash disposal (out by Thursday night)",
+        "status": "completed",
+        "completedDate": "2025-06-12T21:30:00.000Z"
       },
       {
         "person": "Oliver",
-        "chore": "Kitchen & dining-room tables: cloth replacement & wipe-down"
+        "chore": "Kitchen & dining-room tables: cloth replacement & wipe-down",
+        "status": "completed",
+        "completedDate": "2025-06-11T16:45:00.000Z"
       },
       {
         "person": "Oliver",
-        "chore": "Second-floor bathroom, mop floor & toilet"
+        "chore": "Second-floor bathroom, mop floor & toilet",
+        "status": "completed",
+        "completedDate": "2025-06-11T17:20:00.000Z"
       },
       {
         "person": "Spencer",
-        "chore": "Vacuum kitchen"
+        "chore": "Vacuum kitchen",
+        "status": "completed",
+        "completedDate": "2025-06-12T19:15:00.000Z"
       },
       {
         "person": "Spencer",
-        "chore": "Vacuum stairs"
+        "chore": "Vacuum stairs",
+        "status": "completed",
+        "completedDate": "2025-06-12T19:30:00.000Z"
       }
     ],
     "created": "2025-05-30T21:25:09.493Z"
+  },
+  "completions": {
+    "Adam-Replace foil in cooking stove": true,
+    "Adam-Wipe down kitchen countertops": true,
+    "Ben-Sweep kitchen": true,
+    "Ben-Ground-floor bathroom & toilet": true,
+    "Isaac-Sweep living room": true,
+    "Isaac-Hefker sweep ground floor living room - clean up items and trash": true,
+    "Jason-Wipe down kitchen stove, knobs, and surfaces": true,
+    "Jason-Ground-floor washing sink": true,
+    "Jonah-Mop down kitchen": false,
+    "Jonah-Vacuum living room": false,
+    "Nahum-General tidy-up of common spaces": true,
+    "Nahum-Recycling and trash disposal (out by Thursday night)": true,
+    "Oliver-Kitchen & dining-room tables: cloth replacement & wipe-down": true,
+    "Oliver-Second-floor bathroom, mop floor & toilet": true,
+    "Spencer-Vacuum kitchen": true,
+    "Spencer-Vacuum stairs": true
+  },
+  "violations": {
+    "history": [
+      {
+        "id": 1748640987654,
+        "person": "Jonah",
+        "chore": "Mop down kitchen",
+        "cycleId": 1748640309493,
+        "cycleStartDate": "2025-06-10T00:00:00.000Z",
+        "cycleEndDate": "2025-06-13T00:00:00.000Z",
+        "violationDate": "2025-06-13T19:00:00.000Z",
+        "violationType": "incomplete", 
+        "isResolved": false,
+        "carryOverToNextCycle": true
+      },
+      {
+        "id": 1748640987655,
+        "person": "Jonah",
+        "chore": "Vacuum living room", 
+        "cycleId": 1748640309493,
+        "cycleStartDate": "2025-06-10T00:00:00.000Z",
+        "cycleEndDate": "2025-06-13T00:00:00.000Z",
+        "violationDate": "2025-06-13T19:00:00.000Z",
+        "violationType": "incomplete",
+        "isResolved": false,
+        "carryOverToNextCycle": true
+      },
+      {
+        "id": 1748640456789,
+        "person": "Jonah",
+        "chore": "Wipe down kitchen countertops", 
+        "cycleId": 1748631520123,
+        "cycleStartDate": "2025-05-27T00:00:00.000Z",
+        "cycleEndDate": "2025-05-30T00:00:00.000Z",
+        "violationDate": "2025-05-30T19:00:00.000Z",
+        "violationType": "incomplete",
+        "isResolved": false,
+        "carryOverToNextCycle": true
+      }
+    ],
+    "backlog": {
+      "Jonah": [
+        {
+          "chore": "Mop down kitchen",
+          "originalCycle": 1748640309493,
+          "carryOverCount": 1
+        },
+        {
+          "chore": "Vacuum living room",
+          "originalCycle": 1748640309493,
+          "carryOverCount": 1
+        },
+        {
+          "chore": "Wipe down kitchen countertops",
+          "originalCycle": 1748631520123,
+          "carryOverCount": 2
+        }
+      ]
+    },
+    "statistics": {
+      "Adam": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      },
+      "Ben": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      },
+      "Isaac": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      },
+      "Jason": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      },
+      "Jonah": {
+        "totalViolations": 3,
+        "currentBacklog": 3,
+        "consecutiveViolations": 2
+      },
+      "Nahum": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      },
+      "Oliver": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      },
+      "Spencer": {
+        "totalViolations": 0,
+        "currentBacklog": 0,
+        "consecutiveViolations": 0
+      }
+    }
   },
   "settings": {
     "cycleLength": 14,
@@ -83,11 +236,18 @@
     "maxChoresPerPerson": 3,
     "cycleStartDay": "Tuesday",
     "deadlineDay": "Friday",
-    "timezone": "America/New_York"
+    "timezone": "America/New_York",
+    "violationSettings": {
+      "carryOverEnabled": true,
+      "maxBacklogChores": 4,
+      "penaltyEnabled": true,
+      "autoMarkViolations": true
+    }
   },
   "stats": {
-    "totalCycles": 0,
+    "totalCycles": 2,
     "totalViolations": 3,
-    "activeAssignments": 16
+    "activeAssignments": 16,
+    "completionRate": 87.5
   }
 }
