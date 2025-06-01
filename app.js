@@ -1,20 +1,16 @@
 class ChoreManager {
     constructor() {
-        this.data = this.getDefaultData();
-        this.chart = null;
-        this.init();
-    }
-
-    getDefaultData() {
-        return {
+        // Initialize with proper data structure
+        this.data = {
             metadata: {
                 lastUpdated: new Date().toISOString(),
-                version: "2.1",
+                version: "2.2",
                 cycleNumber: 1,
-                description: "Bi-weekly chore assignments for Shabbat cleanup"
+                description: "Bi-weekly Shabbat cleaning",
+                baseShabbatDate: "2025-05-30T18:00:00.000Z"
             },
             currentCycle: {},
-            previousCycles: [], // FIXED: Initialize as empty array
+            previousCycles: [],
             violations: [],
             people: ["Oliver", "Spencer", "Ben", "Isaac", "Jason", "Jonah", "Nahum", "Adam"],
             chores: [
@@ -23,7 +19,7 @@ class ChoreManager {
                 "Sweep kitchen",
                 "Sweep living room",
                 "Ground-floor bathroom & toilet",
-                "Recycling and trash disposal duty (Both out by Thursday night, Tuesday trash only)",
+                "Recycling and trash disposal (out by Thursday night)",
                 "Vacuum kitchen",
                 "Vacuum living room",
                 "Mop down kitchen",
@@ -43,127 +39,91 @@ class ChoreManager {
                 deadlineDay: "Friday",
                 timezone: "America/New_York"
             },
-            statistics: {
-                totalCycles: 0,
-                totalViolations: 0,
-                completionRates: {}
-            }
+            statistics: {}
         };
+        this.init();
     }
 
     async init() {
-        console.log('Initializing ChoreManager...');
         await this.loadInitialData();
         this.setupEventListeners();
-        this.hideLoading();
-        this.renderAll();
+        this.render();
     }
 
     async loadInitialData() {
         try {
-            const response = await fetch('./current-chore-data.json');
+            const response = await fetch('current-chore-data.json');
             if (response.ok) {
-                const loadedData = await response.json();
-                this.data = { ...this.getDefaultData(), ...loadedData };
-                // Ensure arrays are properly initialized
-                if (!Array.isArray(this.data.previousCycles)) {
-                    this.data.previousCycles = [];
-                }
-                if (!Array.isArray(this.data.violations)) {
-                    this.data.violations = [];
-                }
-                console.log('Data loaded from GitHub file:', this.data);
+                const data = await response.json();
+                this.data = {
+                    ...this.data,
+                    ...data,
+                    previousCycles: data.previousCycles || [],
+                    violations: data.violations || []
+                };
             }
         } catch (error) {
-            console.log('No GitHub file found, using default data');
+            console.log('Using default data structure');
         }
+        this.updateStatistics();
     }
 
-    setupEventListeners() {
-        // Generate new cycle
-        document.getElementById('generateCycleBtn').addEventListener('click', () => {
-            this.generateNewCycle();
-        });
-
-        // Export data
-        document.getElementById('exportDataBtn').addEventListener('click', () => {
-            this.exportData('chore-data');
-        });
-
-        // GitHub export
-        document.getElementById('githubExportBtn').addEventListener('click', () => {
-            this.exportData('current-chore-data');
-        });
-
-        // Import data
-        document.getElementById('importFileInput').addEventListener('change', (e) => {
-            this.importData(e);
-        });
-
-        // Add violation
-        document.getElementById('addViolationBtn').addEventListener('click', () => {
-            this.addViolation();
-        });
-
-        // Set default violation date to now
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('violationDateInput').value = now.toISOString().slice(0, 16);
+    // FIXED: Base date calculation for 2-week cycles from May 30, 2025
+    getBaseShabbatDate() {
+        return new Date('2025-05-30T18:00:00.000Z');
     }
 
+    calculateCycleDates(cycleNumber) {
+        const baseDate = this.getBaseShabbatDate();
+        const weeksFromBase = (cycleNumber - 1) * 2; // Every 2 weeks
+        
+        // Calculate start date (Tuesday before Shabbat)
+        const startDate = new Date(baseDate);
+        startDate.setDate(baseDate.getDate() + (weeksFromBase * 7) - 3);
+        
+        // Calculate end date (Friday - Shabbat start)
+        const endDate = new Date(baseDate);
+        endDate.setDate(baseDate.getDate() + (weeksFromBase * 7));
+        
+        return {
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+        };
+    }
+
+    // FIXED: Generate new cycle with proper date calculation
     generateNewCycle() {
-        console.log('Generating new cycle...');
+        if (!Array.isArray(this.data.previousCycles)) {
+            this.data.previousCycles = [];
+        }
         
-        // Archive current cycle if it exists
-        if (this.data.currentCycle && Object.keys(this.data.currentCycle).length > 0) {
-            // Ensure previousCycles is initialized
-            if (!Array.isArray(this.data.previousCycles)) {
-                this.data.previousCycles = [];
-            }
+        // Archive current cycle
+        if (Object.keys(this.data.currentCycle).length > 0) {
             this.data.previousCycles.push(this.data.currentCycle);
-            console.log('Archived current cycle');
         }
 
-        // Calculate next cycle dates (bi-weekly from today)
-        const now = new Date();
-        const nextTuesday = this.getNextTuesday(now);
-        const nextFriday = new Date(nextTuesday);
-        nextFriday.setDate(nextFriday.getDate() + 3);
+        const cycleNumber = this.data.metadata.cycleNumber || 1;
+        const dates = this.calculateCycleDates(cycleNumber);
 
-        // Generate new assignments
-        const assignments = this.generateAssignments();
-        
-        // Create new cycle
+        // Generate new assignments avoiding previous chores
+        const newAssignments = this.generateAssignments();
+
         this.data.currentCycle = {
             id: Date.now(),
-            startDate: nextTuesday.toISOString(),
-            endDate: nextFriday.toISOString(),
-            assignments: assignments,
-            completions: this.createCompletionsObject(assignments),
-            created: new Date().toISOString()
+            startDate: dates.startDate,
+            endDate: dates.endDate,
+            assignments: newAssignments,
+            completions: this.createBlankCompletions(newAssignments),
+            created: new Date().toISOString(),
+            cycleNumber: cycleNumber
         };
 
-        // Update metadata
-        this.data.metadata.cycleNumber = (this.data.previousCycles.length || 0) + 1;
+        this.data.metadata.cycleNumber = cycleNumber + 1;
         this.data.metadata.lastUpdated = new Date().toISOString();
-        this.data.statistics.totalCycles = this.data.metadata.cycleNumber;
-
-        console.log('New cycle generated:', this.data.currentCycle);
-        this.renderAll();
-    }
-
-    getNextTuesday(fromDate) {
-        const date = new Date(fromDate);
-        const dayOfWeek = date.getDay();
-        const daysUntilTuesday = (2 - dayOfWeek + 7) % 7;
-        if (daysUntilTuesday === 0 && date.getHours() >= 12) {
-            // If it's Tuesday afternoon, get next Tuesday
-            date.setDate(date.getDate() + 7);
-        } else {
-            date.setDate(date.getDate() + daysUntilTuesday);
-        }
-        date.setHours(0, 0, 0, 0);
-        return date;
+        
+        this.updateStatistics();
+        this.saveToLocalStorage();
+        this.render();
     }
 
     generateAssignments() {
@@ -171,22 +131,24 @@ class ChoreManager {
         const lastCycleAssignments = this.getLastCycleAssignments();
         
         this.data.people.forEach(person => {
-            const lastChores = lastCycleAssignments
+            const previousChores = lastCycleAssignments
                 .filter(a => a.person === person)
                 .map(a => a.chore);
             
-            // Get available chores (not done last cycle)
             const availableChores = this.data.chores.filter(chore => 
-                !lastChores.includes(chore)
+                !previousChores.includes(chore)
             );
             
-            // Randomly assign 2 chores
-            const assignedChores = this.getRandomChores(availableChores, 2);
-            assignedChores.forEach(chore => {
-                assignments.push({ person, chore });
-            });
+            // Assign 2 chores per person
+            const shuffled = availableChores.sort(() => 0.5 - Math.random());
+            for (let i = 0; i < 2 && i < shuffled.length; i++) {
+                assignments.push({
+                    person: person,
+                    chore: shuffled[i]
+                });
+            }
         });
-
+        
         return assignments;
     }
 
@@ -197,12 +159,7 @@ class ChoreManager {
         return [];
     }
 
-    getRandomChores(chores, count) {
-        const shuffled = [...chores].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
-    }
-
-    createCompletionsObject(assignments) {
+    createBlankCompletions(assignments) {
         const completions = {};
         assignments.forEach(assignment => {
             const key = `${assignment.person}-${assignment.chore}`;
@@ -211,404 +168,319 @@ class ChoreManager {
         return completions;
     }
 
-    // VIOLATION MANAGEMENT - FIXED
-    addViolation() {
-        const person = document.getElementById('violationPersonSelect').value;
-        const chore = document.getElementById('violationChoreInput').value.trim();
-        const timestamp = document.getElementById('violationDateInput').value;
-
-        if (!person || !chore || !timestamp) {
-            alert('Please fill in all violation fields');
-            return;
-        }
-
-        const violation = {
+    // FIXED: Violation management
+    addViolation(person, chore) {
+        if (!person || !chore) return;
+        
+        const newViolation = {
             id: `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            person: person,
-            chore: chore,
-            cycleId: this.data.currentCycle.id || 'unknown',
-            timestamp: new Date(timestamp).toISOString(),
+            person,
+            chore,
+            timestamp: new Date().toISOString(),
             resolved: false
         };
-
-        // Ensure violations array exists
+        
         if (!Array.isArray(this.data.violations)) {
             this.data.violations = [];
         }
-
-        this.data.violations.push(violation);
-        this.data.statistics.totalViolations = this.data.violations.length;
-        this.data.metadata.lastUpdated = new Date().toISOString();
-
-        // Clear form
-        document.getElementById('violationPersonSelect').value = '';
-        document.getElementById('violationChoreInput').value = '';
         
-        console.log('Added violation:', violation);
-        this.renderAll();
+        this.data.violations.push(newViolation);
+        this.updateStatistics();
+        this.saveToLocalStorage();
+        this.render();
     }
 
     removeViolation(violationId) {
-        if (!Array.isArray(this.data.violations)) {
-            this.data.violations = [];
-            return;
-        }
-
         this.data.violations = this.data.violations.filter(v => v.id !== violationId);
-        this.data.statistics.totalViolations = this.data.violations.length;
-        this.data.metadata.lastUpdated = new Date().toISOString();
-        
-        console.log('Removed violation:', violationId);
-        this.renderAll();
+        this.updateStatistics();
+        this.saveToLocalStorage();
+        this.render();
     }
 
-    // IMPORT/EXPORT - FIXED
-    exportData(filename = 'chore-data') {
+    // Statistics and display methods
+    updateStatistics() {
+        const stats = {};
+        
+        this.data.people.forEach(person => {
+            const personViolations = this.data.violations.filter(v => v.person === person);
+            const totalAssignments = this.getTotalAssignments(person);
+            const completedAssignments = this.getCompletedAssignments(person);
+            
+            stats[person] = {
+                violations: personViolations.length,
+                completionRate: totalAssignments > 0 ? (completedAssignments / totalAssignments) : 0,
+                activeViolations: personViolations.filter(v => !v.resolved).length
+            };
+        });
+        
+        this.data.statistics = stats;
+    }
+
+    getTotalAssignments(person) {
+        let total = 0;
+        if (this.data.currentCycle.assignments) {
+            total += this.data.currentCycle.assignments.filter(a => a.person === person).length;
+        }
+        this.data.previousCycles.forEach(cycle => {
+            if (cycle.assignments) {
+                total += cycle.assignments.filter(a => a.person === person).length;
+            }
+        });
+        return total;
+    }
+
+    getCompletedAssignments(person) {
+        let completed = 0;
+        if (this.data.currentCycle.completions) {
+            Object.entries(this.data.currentCycle.completions).forEach(([key, value]) => {
+                if (key.startsWith(person + '-') && value === true) {
+                    completed++;
+                }
+            });
+        }
+        this.data.previousCycles.forEach(cycle => {
+            if (cycle.completions) {
+                Object.entries(cycle.completions).forEach(([key, value]) => {
+                    if (key.startsWith(person + '-') && value === true) {
+                        completed++;
+                    }
+                });
+            }
+        });
+        return completed;
+    }
+
+    // Data persistence
+    saveToLocalStorage() {
+        localStorage.setItem('choreManagerData', JSON.stringify(this.data));
+    }
+
+    // Export/Import functionality
+    handleExport() {
         const dataStr = JSON.stringify(this.data, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(dataBlob);
-        link.download = `${filename}-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        
-        console.log('Exported data:', filename);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `chore-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 
-    importData(event) {
+    updateGitHubFile() {
+        const dataStr = JSON.stringify(this.data, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "current-chore-data.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    handleImport(event) {
         const file = event.target.files[0];
         if (!file) return;
-
+        
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
-                
-                // Merge with default structure to ensure all properties exist
-                this.data = { ...this.getDefaultData(), ...importedData };
-                
-                // Ensure arrays are properly initialized
-                if (!Array.isArray(this.data.previousCycles)) {
-                    this.data.previousCycles = [];
-                }
-                if (!Array.isArray(this.data.violations)) {
-                    this.data.violations = [];
-                }
-                
-                console.log('Imported data:', this.data);
-                this.renderAll();
-                
-                // Clear the file input
-                event.target.value = '';
-                
+                this.data = {
+                    ...this.data,
+                    ...importedData,
+                    previousCycles: importedData.previousCycles || [],
+                    violations: importedData.violations || []
+                };
+                this.updateStatistics();
+                this.render();
+                this.saveToLocalStorage();
             } catch (error) {
                 alert('Error importing file: ' + error.message);
-                console.error('Import error:', error);
             }
         };
         reader.readAsText(file);
     }
 
-    // RENDERING METHODS
-    renderAll() {
-        this.renderStatistics();
+    // UI Rendering
+    render() {
         this.renderCurrentCycle();
         this.renderViolations();
-        this.renderPreviousCycles();
-        this.populateViolationForm();
-    }
-
-    renderStatistics() {
-        this.calculateStatistics();
-        this.renderChart();
-        this.renderQuickStats();
-        this.renderActiveViolations();
-    }
-
-    calculateStatistics() {
-        // Calculate completion rates
-        const rates = {};
-        this.data.people.forEach(person => {
-            rates[person] = this.calculatePersonCompletionRate(person);
-        });
-        this.data.statistics.completionRates = rates;
-    }
-
-    calculatePersonCompletionRate(person) {
-        let totalAssignments = 0;
-        let completedAssignments = 0;
-
-        // Current cycle
-        if (this.data.currentCycle && this.data.currentCycle.assignments) {
-            const currentAssignments = this.data.currentCycle.assignments.filter(a => a.person === person);
-            totalAssignments += currentAssignments.length;
-            
-            currentAssignments.forEach(assignment => {
-                const key = `${assignment.person}-${assignment.chore}`;
-                if (this.data.currentCycle.completions && this.data.currentCycle.completions[key]) {
-                    completedAssignments++;
-                }
-            });
-        }
-
-        // Previous cycles
-        if (Array.isArray(this.data.previousCycles)) {
-            this.data.previousCycles.forEach(cycle => {
-                if (cycle.assignments) {
-                    const assignments = cycle.assignments.filter(a => a.person === person);
-                    totalAssignments += assignments.length;
-                    
-                    assignments.forEach(assignment => {
-                        const key = `${assignment.person}-${assignment.chore}`;
-                        if (cycle.completions && cycle.completions[key]) {
-                            completedAssignments++;
-                        }
-                    });
-                }
-            });
-        }
-
-        return totalAssignments > 0 ? (completedAssignments / totalAssignments) : 1;
-    }
-
-    renderChart() {
-        const ctx = document.getElementById('completionChart');
-        if (!ctx) return;
-
-        if (this.chart) {
-            this.chart.destroy();
-        }
-
-        const rates = this.data.statistics.completionRates || {};
-        const labels = Object.keys(rates);
-        const data = Object.values(rates).map(rate => (rate * 100).toFixed(1));
-
-        this.chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Completion Rate (%)',
-                    data: data,
-                    backgroundColor: labels.map(label => {
-                        const rate = rates[label];
-                        if (rate >= 0.9) return '#28a745';
-                        if (rate >= 0.7) return '#ffc107';
-                        return '#dc3545';
-                    }),
-                    borderColor: '#333',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-
-    renderQuickStats() {
-        const totalViolations = this.data.violations ? this.data.violations.length : 0;
-        const activeViolations = this.data.violations ? 
-            this.data.violations.filter(v => !v.resolved).length : 0;
-        
-        const html = `
-            <div class="stat-item">
-                <span class="stat-label">Total Cycles:</span>
-                <span class="stat-value">${this.data.statistics.totalCycles || 0}</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Active Violations:</span>
-                <span class="stat-value violation-count">${activeViolations}</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Total Violations:</span>
-                <span class="stat-value">${totalViolations}</span>
-            </div>
-        `;
-        
-        document.getElementById('quickStats').innerHTML = html;
-    }
-
-    renderActiveViolations() {
-        const activeViolations = this.data.violations ? 
-            this.data.violations.filter(v => !v.resolved) : [];
-        
-        if (activeViolations.length === 0) {
-            document.getElementById('activeViolations').innerHTML = '<p class="no-violations">No active violations 🎉</p>';
-            return;
-        }
-
-        const html = activeViolations.map(violation => `
-            <div class="violation-item">
-                <strong>${violation.person}</strong><br>
-                ${violation.chore}<br>
-                <small>${new Date(violation.timestamp).toLocaleString()}</small>
-            </div>
-        `).join('');
-        
-        document.getElementById('activeViolations').innerHTML = html;
+        this.renderStatistics();
+        this.renderHistory();
     }
 
     renderCurrentCycle() {
-        if (!this.data.currentCycle || !this.data.currentCycle.assignments) {
-            document.getElementById('cycleDates').innerHTML = '<p>No current cycle. Generate a new cycle to get started.</p>';
-            document.getElementById('currentAssignments').innerHTML = '';
+        const cycleEl = document.getElementById('currentCycle');
+        if (!cycleEl) return;
+        
+        const currentCycle = this.data.currentCycle;
+        if (!currentCycle.assignments) {
+            cycleEl.innerHTML = '<p>No current cycle. Generate a new cycle to begin.</p>';
             return;
         }
 
-        // Render cycle dates
-        const startDate = new Date(this.data.currentCycle.startDate).toLocaleDateString();
-        const endDate = new Date(this.data.currentCycle.endDate).toLocaleDateString();
-        document.getElementById('cycleDates').innerHTML = `
-            <p><strong>Cycle ${this.data.metadata.cycleNumber}:</strong> ${startDate} - ${endDate}</p>
+        const startDate = new Date(currentCycle.startDate).toLocaleDateString();
+        const endDate = new Date(currentCycle.endDate).toLocaleDateString();
+
+        let html = `
+            <h3>Current Cycle: ${startDate} - ${endDate}</h3>
+            <div class="assignments-grid">
         `;
 
-        // Group assignments by person
-        const assignmentsByPerson = {};
-        this.data.currentCycle.assignments.forEach(assignment => {
-            if (!assignmentsByPerson[assignment.person]) {
-                assignmentsByPerson[assignment.person] = [];
-            }
-            assignmentsByPerson[assignment.person].push(assignment);
+        this.data.people.forEach(person => {
+            const personChores = currentCycle.assignments.filter(a => a.person === person);
+            html += `
+                <div class="person-card">
+                    <h4>${person}</h4>
+                    <ul>
+            `;
+            personChores.forEach(assignment => {
+                const completionKey = `${assignment.person}-${assignment.chore}`;
+                const isCompleted = currentCycle.completions[completionKey];
+                html += `
+                    <li class="${isCompleted ? 'completed' : 'pending'}">
+                        ${assignment.chore}
+                        <button onclick="choreManager.toggleCompletion('${completionKey}')">
+                            ${isCompleted ? 'Undo' : 'Done'}
+                        </button>
+                    </li>
+                `;
+            });
+            html += '</ul></div>';
         });
 
-        // Render assignments
-        const html = Object.entries(assignmentsByPerson).map(([person, assignments]) => {
-            const choresList = assignments.map(assignment => {
-                const key = `${assignment.person}-${assignment.chore}`;
-                const completed = this.data.currentCycle.completions && this.data.currentCycle.completions[key];
-                const completedClass = completed ? 'completed' : '';
-                
-                return `
-                    <div class="chore-item ${completedClass}">
-                        <input type="checkbox" 
-                               id="${key}" 
-                               ${completed ? 'checked' : ''}
-                               onchange="choreManager.toggleChoreCompletion('${key}')">
-                        <label for="${key}">${assignment.chore}</label>
-                    </div>
-                `;
-            }).join('');
-
-            return `
-                <div class="person-assignments">
-                    <h3>${person}</h3>
-                    <div class="chores-list">
-                        ${choresList}
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        document.getElementById('currentAssignments').innerHTML = html;
+        html += '</div>';
+        cycleEl.innerHTML = html;
     }
 
-    toggleChoreCompletion(key) {
-        if (!this.data.currentCycle.completions) {
-            this.data.currentCycle.completions = {};
+    toggleCompletion(completionKey) {
+        if (this.data.currentCycle.completions) {
+            this.data.currentCycle.completions[completionKey] = !this.data.currentCycle.completions[completionKey];
+            this.updateStatistics();
+            this.saveToLocalStorage();
+            this.render();
         }
-        
-        this.data.currentCycle.completions[key] = !this.data.currentCycle.completions[key];
-        this.data.metadata.lastUpdated = new Date().toISOString();
-        
-        console.log('Toggled completion for:', key, this.data.currentCycle.completions[key]);
-        this.renderStatistics(); // Update stats
     }
 
     renderViolations() {
-        this.renderViolationsList();
-    }
+        const violationsEl = document.getElementById('violations');
+        if (!violationsEl) return;
 
-    renderViolationsList() {
-        if (!Array.isArray(this.data.violations) || this.data.violations.length === 0) {
-            document.getElementById('violationsList').innerHTML = '<p>No violations recorded.</p>';
-            return;
-        }
-
-        const html = this.data.violations.map(violation => `
-            <div class="violation-item">
-                <div class="violation-info">
-                    <strong>${violation.person}</strong> - ${violation.chore}<br>
-                    <small>Date: ${new Date(violation.timestamp).toLocaleString()}</small><br>
-                    <small>Cycle ID: ${violation.cycleId}</small>
-                </div>
-                <button class="btn btn-sm btn-danger" onclick="choreManager.removeViolation('${violation.id}')">
-                    Remove
-                </button>
+        let html = `
+            <h3>⚠️ Violations</h3>
+            <div class="violation-controls">
+                <select id="violationPerson">
+                    <option value="">Select Person</option>
+                    ${this.data.people.map(person => `<option value="${person}">${person}</option>`).join('')}
+                </select>
+                <select id="violationChore">
+                    <option value="">Select Chore</option>
+                    ${this.data.chores.map(chore => `<option value="${chore}">${chore}</option>`).join('')}
+                </select>
+                <button onclick="choreManager.addViolationFromUI()">Add Violation</button>
             </div>
-        `).join('');
-        
-        document.getElementById('violationsList').innerHTML = html;
-    }
+            <div class="violations-list">
+        `;
 
-    renderPreviousCycles() {
-        if (!Array.isArray(this.data.previousCycles) || this.data.previousCycles.length === 0) {
-            document.getElementById('previousCycles').innerHTML = '<p>No previous cycles.</p>';
-            return;
-        }
-
-        const html = this.data.previousCycles.reverse().map((cycle, index) => {
-            const startDate = new Date(cycle.startDate).toLocaleDateString();
-            const endDate = new Date(cycle.endDate).toLocaleDateString();
-            const totalAssignments = cycle.assignments ? cycle.assignments.length : 0;
-            const completedAssignments = cycle.completions ? 
-                Object.values(cycle.completions).filter(c => c).length : 0;
-            
-            return `
-                <div class="cycle-summary">
-                    <h4>Cycle ${this.data.previousCycles.length - index} (${startDate} - ${endDate})</h4>
-                    <p>Completed: ${completedAssignments}/${totalAssignments} assignments</p>
+        this.data.violations.forEach(violation => {
+            const date = new Date(violation.timestamp).toLocaleDateString();
+            html += `
+                <div class="violation-item">
+                    <span><strong>${violation.person}</strong>: ${violation.chore}</span>
+                    <span class="violation-date">${date}</span>
+                    <button onclick="choreManager.removeViolation('${violation.id}')">Remove</button>
                 </div>
             `;
-        }).join('');
-        
-        document.getElementById('previousCycles').innerHTML = html;
-    }
-
-    populateViolationForm() {
-        const select = document.getElementById('violationPersonSelect');
-        select.innerHTML = '<option value="">Select Person</option>';
-        
-        this.data.people.forEach(person => {
-            const option = document.createElement('option');
-            option.value = person;
-            option.textContent = person;
-            select.appendChild(option);
         });
+
+        html += '</div>';
+        violationsEl.innerHTML = html;
     }
 
-    hideLoading() {
-        const loading = document.getElementById('loading');
-        if (loading) {
-            loading.style.display = 'none';
+    addViolationFromUI() {
+        const personEl = document.getElementById('violationPerson');
+        const choreEl = document.getElementById('violationChore');
+        
+        if (personEl.value && choreEl.value) {
+            this.addViolation(personEl.value, choreEl.value);
+            personEl.value = '';
+            choreEl.value = '';
+        }
+    }
+
+    renderStatistics() {
+        const statsEl = document.getElementById('statistics');
+        if (!statsEl) return;
+
+        let html = '<h3>📊 Statistics</h3><div class="stats-grid">';
+        
+        Object.entries(this.data.statistics).forEach(([person, stats]) => {
+            html += `
+                <div class="stat-card">
+                    <h4>${person}</h4>
+                    <p>Completion Rate: ${(stats.completionRate * 100).toFixed(1)}%</p>
+                    <p>Total Violations: ${stats.violations}</p>
+                    <p>Active Violations: ${stats.activeViolations}</p>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        statsEl.innerHTML = html;
+    }
+
+    renderHistory() {
+        const historyEl = document.getElementById('history');
+        if (!historyEl) return;
+
+        let html = '<h3>🕰️ Previous Cycles</h3>';
+        
+        this.data.previousCycles.forEach((cycle, index) => {
+            const startDate = new Date(cycle.startDate).toLocaleDateString();
+            const endDate = new Date(cycle.endDate).toLocaleDateString();
+            
+            html += `
+                <div class="history-cycle">
+                    <h4>Cycle ${cycle.cycleNumber || index + 1}: ${startDate} - ${endDate}</h4>
+                </div>
+            `;
+        });
+
+        historyEl.innerHTML = html;
+    }
+
+    // Event listeners
+    setupEventListeners() {
+        // Generate cycle button
+        const generateBtn = document.getElementById('generateCycle');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => this.generateNewCycle());
+        }
+
+        // Export button
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.handleExport());
+        }
+
+        // GitHub button
+        const githubBtn = document.getElementById('githubBtn');
+        if (githubBtn) {
+            githubBtn.addEventListener('click', () => this.updateGitHubFile());
+        }
+
+        // Import button
+        const importBtn = document.getElementById('importBtn');
+        if (importBtn) {
+            importBtn.addEventListener('change', (e) => this.handleImport(e));
         }
     }
 }
 
-// Initialize the app when the DOM is loaded
+// Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     window.choreManager = new ChoreManager();
 });
-
-// Global function for checkbox changes (needed for inline onclick)
-function toggleChoreCompletion(key) {
-    if (window.choreManager) {
-        window.choreManager.toggleChoreCompletion(key);
-    }
-}
