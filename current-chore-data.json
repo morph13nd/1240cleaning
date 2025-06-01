@@ -2,7 +2,7 @@
   "metadata": {
     "lastUpdated": "2025-06-01T04:10:12.081Z",
     "version": "2.1",
-    "cycleNumber": 2,
+    "cycleNumber": 1,
     "description": "Bi-weekly chore assignments for Shabbat cleanup"
   },
   "currentCycle": {
@@ -102,27 +102,82 @@
       "endDate": "2025-05-30T00:00:00.000Z",
       "assignments": [
         {
-          "person": "Adam",
-          "chore": "Vacuum kitchen"
-        },
-        {
-          "person": "Adam",
-          "chore": "General tidy-up of common spaces"
-        },
-        {
-          "person": "Ben",
+          "person": "Oliver",
           "chore": "Second-floor bathroom, mop floor & toilet"
         },
         {
+          "person": "Oliver",
+          "chore": "Ground-floor washing sink"
+        },
+        {
+          "person": "Spencer",
+          "chore": "Sweep kitchen"
+        },
+        {
+          "person": "Spencer",
+          "chore": "Sweep living room"
+        },
+        {
           "person": "Ben",
+          "chore": "Ground-floor bathroom & toilet"
+        },
+        {
+          "person": "Ben",
+          "chore": "Recycling and trash disposal (out by Thursday night)"
+        },
+        {
+          "person": "Isaac",
+          "chore": "Vacuum kitchen"
+        },
+        {
+          "person": "Isaac",
+          "chore": "Vacuum living room"
+        },
+        {
+          "person": "Jason",
+          "chore": "Mop down kitchen"
+        },
+        {
+          "person": "Jason",
+          "chore": "Kitchen & dining-room tables: cloth replacement & wipe-down"
+        },
+        {
+          "person": "Jonah",
+          "chore": "Replace foil in cooking stove"
+        },
+        {
+          "person": "Jonah",
+          "chore": "Wipe down kitchen stove, knobs, and surfaces"
+        },
+        {
+          "person": "Jonah",
+          "chore": "Wipe down kitchen countertops"
+        },
+        {
+          "person": "Nahum",
+          "chore": "General tidy-up of common spaces"
+        },
+        {
+          "person": "Nahum",
           "chore": "Vacuum stairs"
         }
       ],
       "completions": {
-        "Adam-Vacuum kitchen": true,
-        "Adam-General tidy-up of common spaces": true,
-        "Ben-Second-floor bathroom, mop floor & toilet": true,
-        "Ben-Vacuum stairs": true
+        "Oliver-Second-floor bathroom, mop floor & toilet": true,
+        "Oliver-Ground-floor washing sink": true,
+        "Spencer-Sweep kitchen": true,
+        "Spencer-Sweep living room": true,
+        "Ben-Ground-floor bathroom & toilet": true,
+        "Ben-Recycling and trash disposal (out by Thursday night)": true,
+        "Isaac-Vacuum kitchen": true,
+        "Isaac-Vacuum living room": true,
+        "Jason-Mop down kitchen": true,
+        "Jason-Kitchen & dining-room tables: cloth replacement & wipe-down": true,
+        "Jonah-Replace foil in cooking stove": true,
+        "Jonah-Wipe down kitchen stove, knobs, and surfaces": true,
+        "Jonah-Wipe down kitchen countertops": true,
+        "Nahum-General tidy-up of common spaces": true,
+        "Nahum-Vacuum stairs": true
       },
       "created": "2025-05-27T10:00:00.000Z"
     }
