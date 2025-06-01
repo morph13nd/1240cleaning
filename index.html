@@ -1,49 +1,83 @@
+# Complete Chore Manager - index.html
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bi-Weekly Chore Manager</title>
+    <title>Bi-Weekly Shabbat Chore Manager</title>
     <link rel="stylesheet" href="assets/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>🧹 Bi-Weekly Shabbat Cleaning Manager 🧽</h1>
+        <h1>🧹 Bi-Weekly Shabbat Chore Manager 🧽</h1>
         
-        <!-- Statistics Dashboard -->
-        <div id="statistics">
-            <h2>📊 Performance Overview</h2>
-            <div id="statsGrid"></div>
-        </div>
-
-        <!-- Current Cycle -->
-        <div id="currentCycle">
-            <h2>Current Cleaning Cycle</h2>
-            <div class="controls">
-                <button id="generateCycle">Generate New Cycle</button>
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading">Loading...</div>
+        
+        <!-- Data Controls -->
+        <div class="controls-section">
+            <div class="data-controls">
+                <button id="generateCycleBtn" class="btn btn-primary">Generate New Cycle</button>
+                <button id="exportDataBtn" class="btn btn-secondary">Export Data</button>
+                <button id="githubExportBtn" class="btn btn-github">Export for GitHub</button>
+                <label for="importFileInput" class="btn btn-import">
+                    Import Data
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                </label>
             </div>
         </div>
 
-        <!-- Violations Management -->
-        <div id="violations">
-            <h2>⚠️ Violations Tracking</h2>
+        <!-- Statistics Dashboard -->
+        <div id="statisticsDashboard" class="section">
+            <h2>📊 Performance Statistics</h2>
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <h3>Completion Rates</h3>
+                    <canvas id="completionChart" width="400" height="200"></canvas>
+                </div>
+                <div class="stats-card">
+                    <h3>Active Violations</h3>
+                    <div id="activeViolations"></div>
+                </div>
+                <div class="stats-card">
+                    <h3>Quick Stats</h3>
+                    <div id="quickStats"></div>
+                </div>
+            </div>
         </div>
 
-        <!-- History -->
-        <div id="history">
-            <h2>🕰️ Previous Cycles</h2>
+        <!-- Current Cycle -->
+        <div id="currentCycleSection" class="section">
+            <h2>🕐 Current Cycle</h2>
+            <div id="cycleDates" class="cycle-info"></div>
+            <div id="currentAssignments" class="assignments-grid"></div>
         </div>
 
-        <!-- Data Management -->
-        <div class="data-controls">
-            <h3>📁 Data Management</h3>
-            <button id="exportBtn">Export Data</button>
-            <input type="file" id="importBtn" accept=".json" style="display: none;">
-            <button onclick="document.getElementById('importBtn').click()">Import Data</button>
-            <button id="githubBtn">Export for GitHub</button>
+        <!-- Violation Management -->
+        <div id="violationManagement" class="section">
+            <h2>⚠️ Violation Management</h2>
+            <div class="violation-controls">
+                <select id="violationPersonSelect">
+                    <option value="">Select Person</option>
+                </select>
+                <input type="text" id="violationChoreInput" placeholder="Enter chore description">
+                <input type="datetime-local" id="violationDateInput">
+                <button id="addViolationBtn" class="btn btn-warning">Add Violation</button>
+            </div>
+            <div id="violationsList" class="violations-list"></div>
+        </div>
+
+        <!-- Previous Cycles History -->
+        <div id="historySection" class="section">
+            <h2>📜 Previous Cycles</h2>
+            <div id="previousCycles"></div>
         </div>
     </div>
 
     <script src="assets/app.js"></script>
 </body>
 </html>
+```
