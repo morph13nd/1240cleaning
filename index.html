@@ -3,160 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>12-40 B12 Shabbat Bi-Weekly Chore Management</title>
+    <title>Bi-Weekly Chore Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>Bi-Weekly Chore Management</h1>
-            <div class="cycle-info card">
-                <div class="card__body">
-                    <div class="cycle-dates">
-                        <div class="date-item">
-                            <label>Current Date:</label>
-                            <span>Friday, May 30, 2025</span>
-                        </div>
-                        <div class="date-item">
-                            <label>Next Cycle Start:</label>
-                            <span>Tuesday, June 10, 2025</span>
-                        </div>
-                        <div class="date-item">
-                            <label>Next Deadline:</label>
-                            <span>Friday, June 13, 2025</span>
-                        </div>
-                        <div class="date-item">
-                            <label>Days Until Next Cycle:</label>
-                            <span id="daysRemaining">11 days</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="card__footer">
-                    <button id="generateCycleBtn" class="btn btn--primary">Generate New Cycle</button>
-                </div>
-            </div>
+            <h1>Bi-Weekly Chore Manager</h1>
+            <p class="text-center">Shabbat Preparation Schedule</p>
         </header>
 
+        <!-- Cycle Information -->
+        <section class="cycle-info card">
+            <div class="card__body">
+                <h2>Current Cycle Information</h2>
+                <div class="cycle-dates">
+                    <div class="date-item">
+                        <label>Current Date</label>
+                        <span>Friday, May 30, 2025</span>
+                    </div>
+                    <div class="date-item">
+                        <label>Next Cycle Start</label>
+                        <span>Tuesday, June 10, 2025</span>
+                    </div>
+                    <div class="date-item">
+                        <label>Next Deadline</label>
+                        <span>Friday, June 13, 2025</span>
+                    </div>
+                    <div class="date-item">
+                        <label>Days Until Next Cycle</label>
+                        <span class="status status--info" id="daysRemaining">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Generate New Cycle -->
+        <section class="cycle-generation card">
+            <div class="card__body">
+                <h3>Cycle Management</h3>
+                <p class="mb-8">Generate assignments for the next bi-weekly cycle. Each person gets exactly 2 chores with no repeats from the previous cycle.</p>
+                <button id="generateCycleBtn" class="btn btn--primary">
+                    Generate New Cycle
+                </button>
+            </div>
+        </section>
+
+        <!-- Current Assignments -->
         <section class="current-assignments card">
-            <div class="card__header">
+            <div class="card__body">
                 <h3>Current Assignments</h3>
-            </div>
-            <div class="card__body">
                 <div id="assignmentsTable" class="assignments-table">
-                    <div class="status status--warning">No assignments generated yet. Click "Generate New Cycle" to start.</div>
+                    <div class="loading">Loading assignments...</div>
                 </div>
             </div>
         </section>
 
+        <!-- Violation Management -->
         <section class="violation-management card">
-            <div class="card__header">
+            <div class="card__body">
                 <h3>Violation Management</h3>
-            </div>
-            <div class="card__body">
-                <div class="flex flex-col gap-16">
-                    <div class="flex flex-col gap-8">
-                        <div class="form-group">
-                            <label for="violationPerson" class="form-label">Person</label>
-                            <select id="violationPerson" class="form-control">
-                                <option value="">Select person...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="violationChore" class="form-label">Chore</label>
-                            <select id="violationChore" class="form-control">
-                                <option value="">Select chore...</option>
-                            </select>
-                        </div>
+                <p class="mb-8">Track violations when chores are not completed by Friday deadline.</p>
+                
+                <div class="button-group gap-16">
+                    <div class="form-group">
+                        <label class="form-label" for="violationPerson">Person</label>
+                        <select id="violationPerson" class="form-control">
+                            <option value="">Select person...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="violationChore">Chore</label>
+                        <select id="violationChore" class="form-control">
+                            <option value="">Select chore...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
                         <div class="button-group">
-                            <button id="addViolationBtn" class="btn btn--primary">Add Violation</button>
-                            <button id="removeViolationBtn" class="btn btn--secondary">Remove Violation</button>
+                            <button id="addViolationBtn" class="btn btn--secondary">Add Violation</button>
+                            <button id="removeViolationBtn" class="btn btn--outline">Remove Violation</button>
                         </div>
                     </div>
+                </div>
 
-                    <div>
-                        <h4>Current Violations</h4>
-                        <div id="violationsList" class="violations-list">
-                            <div class="status status--success">No violations recorded.</div>
-                        </div>
+                <div class="violations-list mt-8">
+                    <h4>Current Violations</h4>
+                    <div id="violationsList">
+                        <div class="status status--success">No violations recorded.</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="future-cycles card">
-            <div class="card__header">
-                <div class="flex justify-between items-center">
-                    <h3>Future Cycles (1 Year)</h3>
-                    <button id="toggleFutureCycles" class="btn btn--secondary btn--sm">
-                        <span id="toggleIcon">▼</span> Show Cycles
-                    </button>
-                </div>
-            </div>
-            <div id="futureCyclesContent" class="card__body hidden">
-                <div id="futureCyclesTable" class="future-cycles-table">
-                    <!-- Future cycles will be populated here -->
-                </div>
-            </div>
-        </section>
-
+        <!-- Statistics -->
         <section class="statistics card">
-            <div class="card__header">
-                <h3>Statistics</h3>
-            </div>
             <div class="card__body">
-                <div class="stats-content">
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <label>Total Cycles</label>
-                            <span id="totalCycles">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <label>Violations</label>
-                            <span id="totalViolations">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <label>Completion Rate</label>
-                            <span id="completionRate">100%</span>
-                        </div>
+                <h3>Performance Statistics</h3>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <label>Total Cycles</label>
+                        <span id="totalCycles">0</span>
                     </div>
+                    <div class="stat-item">
+                        <label>Total Violations</label>
+                        <span id="totalViolations">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>Overall Completion Rate</label>
+                        <span id="completionRate">100%</span>
+                    </div>
+                </div>
 
-                    <div id="personalStats" class="personal-stats">
+                <div class="personal-stats">
+                    <div id="personalStats">
                         <h4>Personal Performance</h4>
-                        <!-- Personal stats will be populated here -->
+                        <div class="person-stat">
+                            <div>Person</div>
+                            <div>Completion Rate</div>
+                            <div>Violations</div>
+                        </div>
+                        <div class="loading">Loading statistics...</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="data-management card">
-            <div class="card__header">
-                <h3>Data Management</h3>
-            </div>
+        <!-- Future Cycles -->
+        <section class="future-cycles card">
             <div class="card__body">
+                <h3>
+                    <button id="toggleFutureCycles" class="btn btn--outline btn--sm">
+                        <span id="toggleIcon">▼</span> View Future Cycles (1 Year)
+                    </button>
+                </h3>
+                <div id="futureCyclesContent" class="hidden">
+                    <p class="mb-8">Bi-weekly schedule for the next 26 cycles (52 weeks)</p>
+                    <div id="futureCyclesTable" class="future-cycles-table">
+                        <!-- Future cycles will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Management -->
+        <section class="data-management card">
+            <div class="card__body">
+                <h3>Data Management</h3>
+                <p class="mb-8">Export and import data for backup and GitHub integration.</p>
+                
                 <div class="management-controls">
                     <div class="button-group">
-                        <button id="exportDataBtn" class="btn btn--primary">Export Data</button>
-                        <button id="importDataBtn" class="btn btn--secondary">Import Data</button>
-                        <input type="file" id="importFileInput" class="hidden" accept=".json">
+                        <button id="exportDataBtn" class="btn btn--secondary">
+                            Export Data Backup
+                        </button>
+                        <button id="importDataBtn" class="btn btn--secondary">
+                            Import Data Backup
+                        </button>
+                        <input type="file" id="importFileInput" accept=".json" class="hidden">
                     </div>
 
+                    <!-- GitHub Integration -->
                     <div class="github-integration">
-                        <h4>GitHub Integration</h4>
-                        <p>Generate a data file for GitHub Pages deployment to share state across all users.</p>
-                        <button id="generateGithubFileBtn" class="btn btn--primary">Generate GitHub Data File</button>
+                        <h4>GitHub Pages Integration</h4>
+                        <p>Generate the required data file for shared access across all users.</p>
+                        <button id="generateGithubFileBtn" class="btn btn--primary">
+                            Generate GitHub Data File
+                        </button>
                         
-                        <div id="githubInstructions" class="github-instructions hidden status status--info">
-                            <p>1. Upload the downloaded <code>current-chore-data.json</code> file to your GitHub repository's root folder.</p>
-                            <p>2. Commit and push the changes to deploy the updated data.</p>
-                            <p>3. All users accessing your GitHub Pages site will now see the same assignments.</p>
+                        <div id="githubInstructions" class="github-instructions card hidden">
+                            <div class="card__body">
+                                <h5>GitHub Upload Instructions</h5>
+                                <ol>
+                                    <li>Download the generated <code>current-chore-data.json</code> file</li>
+                                    <li>Upload it to your GitHub repository's root directory</li>
+                                    <li>Commit the changes to update shared data</li>
+                                    <li>All users will now see the same current assignments</li>
+                                </ol>
+                                <p class="status status--info">
+                                    File URL: <code>https://yourusername.github.io/current-chore-data.json</code>
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- Footer -->
         <footer class="footer">
-            <p>Bi-Weekly Chore Management System &copy; 2025</p>
+            <p>&copy; 2025 Bi-Weekly Chore Manager | Built for GitHub Pages</p>
+            <p>Bi-weekly cycles every 14 days | Completion deadline: Friday before Shabbat</p>
         </footer>
     </div>
 

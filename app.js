@@ -6,8 +6,6 @@ class ChoreManager {
         this.nextCycleDeadline = new Date('2025-06-13');
         
         this.people = ["Oliver", "Spencer", "Ben", "Isaac", "Jason", "Jonah", "Nahum", "Adam"];
-        
-        // Updated chores list with blessing chore removed as requested
         this.chores = [
             "Second-floor bathroom, mop floor & toilet",
             "Ground-floor washing sink", 
@@ -32,6 +30,11 @@ class ChoreManager {
             violations: [],
             currentCycle: null,
             completions: {},
+            statistics: {
+                totalCycles: 0,
+                totalViolations: 0,
+                completionRates: {}
+            },
             settings: {
                 cycleLength: 14 // days
             }
@@ -40,37 +43,25 @@ class ChoreManager {
         this.dbName = 'ChoreManagerDB';
         this.dbVersion = 1;
         this.db = null;
+
+        this.init();
     }
 
     async init() {
-        try {
-            console.log('Initializing ChoreManager...');
-            await this.initDB();
-            await this.loadData();
-            await this.tryLoadFromGitHub();
-            this.setupEventListeners();
-            this.updateUI();
-            console.log('ChoreManager initialized successfully');
-        } catch (error) {
-            console.error('Error initializing ChoreManager:', error);
-            // Continue with basic functionality even if some features fail
-            this.setupEventListeners();
-            this.updateUI();
-        }
+        await this.initDB();
+        await this.loadData();
+        await this.tryLoadFromGitHub();
+        this.setupEventListeners();
+        this.updateUI();
     }
 
     async initDB() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.dbVersion);
             
-            request.onerror = () => {
-                console.error('IndexedDB error:', request.error);
-                resolve(); // Don't fail completely if IndexedDB isn't available
-            };
-            
+            request.onerror = () => reject(request.error);
             request.onsuccess = () => {
                 this.db = request.result;
-                console.log('IndexedDB initialized');
                 resolve();
             };
             
@@ -84,66 +75,47 @@ class ChoreManager {
     }
 
     async saveData() {
-        if (!this.db) {
-            console.warn('IndexedDB not available, data not saved');
-            return;
-        }
+        if (!this.db) return;
         
-        try {
-            const transaction = this.db.transaction(['choreData'], 'readwrite');
-            const store = transaction.objectStore('choreData');
-            
-            await store.put({
-                id: 'main',
-                data: this.data,
-                lastUpdated: new Date().toISOString()
-            });
-            console.log('Data saved successfully');
-        } catch (error) {
-            console.error('Error saving data:', error);
-        }
+        const transaction = this.db.transaction(['choreData'], 'readwrite');
+        const store = transaction.objectStore('choreData');
+        
+        await store.put({
+            id: 'main',
+            data: this.data,
+            lastUpdated: new Date().toISOString()
+        });
     }
 
     async loadData() {
-        if (!this.db) {
-            console.warn('IndexedDB not available, using default data');
-            return;
-        }
+        if (!this.db) return;
         
-        try {
-            const transaction = this.db.transaction(['choreData'], 'readonly');
-            const store = transaction.objectStore('choreData');
-            const request = store.get('main');
-            
-            return new Promise((resolve) => {
-                request.onsuccess = () => {
-                    if (request.result && request.result.data) {
-                        this.data = { ...this.data, ...request.result.data };
-                        console.log('Data loaded from IndexedDB');
-                    } else {
-                        console.log('No existing data found, using defaults');
-                    }
-                    resolve();
-                };
-                request.onerror = () => {
-                    console.error('Error loading data:', request.error);
-                    resolve();
-                };
-            });
-        } catch (error) {
-            console.error('Error in loadData:', error);
-        }
+        const transaction = this.db.transaction(['choreData'], 'readonly');
+        const store = transaction.objectStore('choreData');
+        const request = store.get('main');
+        
+        return new Promise((resolve) => {
+            request.onsuccess = () => {
+                if (request.result) {
+                    this.data = { ...this.data, ...request.result.data };
+                }
+                resolve();
+            };
+            request.onerror = () => resolve();
+        });
     }
 
     async tryLoadFromGitHub() {
         try {
+            // Try to fetch current-chore-data.json from GitHub
             const response = await fetch('./current-chore-data.json');
             if (response.ok) {
                 const githubData = await response.json();
+                // Process the GitHub data
                 if (githubData.currentCycle) {
-                    this.data.currentCycle = githubData.currentCycle;
-                    this.data.completions = githubData.completions || {};
-                    console.log('GitHub data loaded successfully');
+                    this.processGitHubData(githubData);
+                    await this.saveData();
+                    console.log('Loaded data from GitHub');
                 }
             }
         } catch (error) {
@@ -151,146 +123,151 @@ class ChoreManager {
         }
     }
 
+    processGitHubData(githubData) {
+        // Extract data from GitHub format into our internal format
+        if (githubData.currentCycle) {
+            const cycle = githubData.currentCycle;
+            
+            // Format dates correctly
+            const startDate = new Date(cycle.startDate);
+            const deadlineDate = new Date(cycle.deadlineDate);
+            
+            // Format assignments into our internal structure
+            const assignments = [];
+            cycle.assignments.forEach(assignment => {
+                // Skip any assignment with "Bless the home" as that's been removed
+                assignment.chores.forEach(chore => {
+                    if (!chore.includes("Bless the home")) {
+                        assignments.push({
+                            person: assignment.person,
+                            chore: chore
+                        });
+                    }
+                });
+            });
+            
+            this.data.currentCycle = {
+                id: cycle.id || `cycle-${deadlineDate.toISOString().split('T')[0]}`,
+                startDate: startDate,
+                endDate: deadlineDate,
+                assignments: assignments
+            };
+            
+            // Create completions object for this cycle
+            if (!this.data.completions[this.data.currentCycle.id]) {
+                this.data.completions[this.data.currentCycle.id] = {};
+            }
+            
+            // Initialize completions based on GitHub data
+            assignments.forEach(assignment => {
+                const key = `${assignment.person}-${assignment.chore}`;
+                // Check if this person has completed their assignments according to GitHub data
+                const personData = cycle.assignments.find(a => a.person === assignment.person);
+                const isCompleted = personData ? !!personData.completed : false;
+                this.data.completions[this.data.currentCycle.id][key] = isCompleted;
+            });
+            
+            // Process violations if available
+            if (cycle.assignments) {
+                cycle.assignments.forEach(personAssignment => {
+                    if (personAssignment.violations > 0) {
+                        // Add violations for each chore
+                        personAssignment.chores.forEach(chore => {
+                            if (!chore.includes("Bless the home")) {
+                                for (let i = 0; i < personAssignment.violations; i++) {
+                                    this.data.violations.push({
+                                        id: Date.now() + Math.random().toString(36).substr(2, 9),
+                                        person: personAssignment.person,
+                                        chore: chore,
+                                        date: new Date().toISOString(),
+                                        cycleId: this.data.currentCycle.id
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    }
+
     setupEventListeners() {
-        console.log('Setting up event listeners...');
-        
-        // Make sure all DOM elements exist before attaching listeners
-        const generateBtn = document.getElementById('generateCycleBtn');
-        const addViolationBtn = document.getElementById('addViolationBtn');
-        const removeViolationBtn = document.getElementById('removeViolationBtn');
-        const toggleFutureBtn = document.getElementById('toggleFutureCycles');
-        const exportBtn = document.getElementById('exportDataBtn');
-        const importBtn = document.getElementById('importDataBtn');
-        const importFileInput = document.getElementById('importFileInput');
-        const generateGithubBtn = document.getElementById('generateGithubFileBtn');
-
-        if (generateBtn) {
-            generateBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Generate cycle button clicked');
-                this.generateNewCycle();
-            });
-        }
-
-        if (addViolationBtn) {
-            addViolationBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Add violation button clicked');
-                this.addViolation();
-            });
-        }
-
-        if (removeViolationBtn) {
-            removeViolationBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Remove violation button clicked');
-                this.removeViolation();
-            });
-        }
-
-        if (toggleFutureBtn) {
-            toggleFutureBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Toggle future cycles button clicked');
-                this.toggleFutureCycles();
-            });
-        }
-
-        if (exportBtn) {
-            exportBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Export data button clicked');
-                this.exportData();
-            });
-        }
-
-        if (importBtn) {
-            importBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Import data button clicked');
-                this.importData();
-            });
-        }
-
-        if (importFileInput) {
-            importFileInput.addEventListener('change', (e) => {
-                console.log('File input changed');
-                this.handleFileImport(e);
-            });
-        }
-
-        if (generateGithubBtn) {
-            generateGithubBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Generate GitHub file button clicked');
-                this.generateGitHubFile();
-            });
-        }
-
-        console.log('Event listeners set up successfully');
+        document.getElementById('generateCycleBtn').addEventListener('click', () => this.generateNewCycle());
+        document.getElementById('addViolationBtn').addEventListener('click', () => this.addViolation());
+        document.getElementById('removeViolationBtn').addEventListener('click', () => this.removeViolation());
+        document.getElementById('toggleFutureCycles').addEventListener('click', () => this.toggleFutureCycles());
+        document.getElementById('exportDataBtn').addEventListener('click', () => this.exportData());
+        document.getElementById('importDataBtn').addEventListener('click', () => this.importData());
+        document.getElementById('importFileInput').addEventListener('change', (e) => this.handleFileImport(e));
+        document.getElementById('generateGithubFileBtn').addEventListener('click', () => this.generateGitHubFile());
     }
 
     calculateDaysRemaining() {
-        const today = this.currentDate;
-        const nextCycle = this.nextCycleStart;
+        const today = new Date();
+        const nextCycle = new Date(this.nextCycleStart);
         const diffTime = nextCycle - today;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays;
+        return diffDays > 0 ? diffDays : 0;
     }
 
     generateNewCycle() {
-        console.log('Starting to generate new cycle...');
         const button = document.getElementById('generateCycleBtn');
-        
-        if (button) {
-            button.classList.add('loading');
-            button.disabled = true;
-        }
+        button.classList.add('loading');
+        button.disabled = true;
 
-        // Use setTimeout to allow UI to update before processing
         setTimeout(() => {
-            try {
-                const assignments = this.generateAssignments();
-                const cycleId = Date.now();
+            const assignments = this.generateAssignments();
+            const cycleId = `cycle-${Date.now()}`;
+            
+            // Calculate the next cycle dates
+            let nextStart;
+            let nextEnd;
+            
+            if (this.data.currentCycle) {
+                // If we have a current cycle, add 14 days to its start date
+                nextStart = new Date(this.data.currentCycle.startDate);
+                nextStart.setDate(nextStart.getDate() + 14);
                 
-                const newCycle = {
-                    id: cycleId,
-                    startDate: new Date(this.nextCycleStart),
-                    endDate: new Date(this.nextCycleDeadline),
-                    assignments: assignments,
-                    created: new Date().toISOString()
-                };
-
-                this.data.currentCycle = newCycle;
-                this.data.cycles.push(newCycle);
-                this.data.completions[cycleId] = {};
-
-                // Initialize completion status
-                assignments.forEach(assignment => {
-                    this.data.completions[cycleId][`${assignment.person}-${assignment.chore}`] = false;
-                });
-
-                this.saveData();
-                this.updateAssignmentsDisplay();
-                this.updateViolationSelects();
-                this.updateStatistics();
-
-                console.log('New cycle generated successfully');
-            } catch (error) {
-                console.error('Error generating cycle:', error);
-            } finally {
-                if (button) {
-                    button.classList.remove('loading');
-                    button.disabled = false;
-                }
+                nextEnd = new Date(nextStart);
+                nextEnd.setDate(nextEnd.getDate() + 3); // End is 3 days after start (Tuesday to Friday)
+            } else {
+                // Use the default next cycle dates
+                nextStart = new Date(this.nextCycleStart);
+                nextEnd = new Date(this.nextCycleDeadline);
             }
+            
+            const newCycle = {
+                id: cycleId,
+                startDate: nextStart,
+                endDate: nextEnd,
+                assignments: assignments,
+                created: new Date().toISOString()
+            };
+
+            this.data.currentCycle = newCycle;
+            this.data.cycles.push(newCycle);
+            this.data.completions[cycleId] = {};
+
+            // Initialize completion status
+            assignments.forEach(assignment => {
+                const key = `${assignment.person}-${assignment.chore}`;
+                this.data.completions[cycleId][key] = false;
+            });
+
+            this.saveData();
+            this.updateAssignmentsDisplay();
+            this.updateViolationSelects();
+            this.updateStatistics();
+
+            button.classList.remove('loading');
+            button.disabled = false;
         }, 300);
     }
 
     generateAssignments() {
         const assignments = [];
         const peopleChores = {};
-        const choreAssignments = {};
+        const prevAssignments = new Map();
 
         // Initialize tracking
         this.people.forEach(person => {
@@ -298,85 +275,147 @@ class ChoreManager {
         });
 
         // Get previous cycle assignments to avoid repeats
-        const previousAssignments = this.getPreviousAssignments();
+        if (this.data.currentCycle) {
+            this.data.currentCycle.assignments.forEach(assignment => {
+                if (!prevAssignments.has(assignment.person)) {
+                    prevAssignments.set(assignment.person, []);
+                }
+                prevAssignments.get(assignment.person).push(assignment.chore);
+            });
+        }
 
-        // Shuffle chores for random assignment
+        // Shuffle chores and people for random assignment
         const shuffledChores = [...this.chores].sort(() => Math.random() - 0.5);
         const shuffledPeople = [...this.people].sort(() => Math.random() - 0.5);
 
-        // Assign chores ensuring each person gets at least 2 chores
-        let personIndex = 0;
-        
-        shuffledChores.forEach(chore => {
-            let assigned = false;
-            let attempts = 0;
+        // First pass: assign one chore to each person avoiding previous assignments
+        for (const person of shuffledPeople) {
+            const prevChores = prevAssignments.get(person) || [];
             
-            while (!assigned && attempts < this.people.length) {
-                const person = shuffledPeople[personIndex % this.people.length];
-                
-                // Check if person had this chore last cycle
-                const hadLastCycle = previousAssignments.some(prev => 
-                    prev.person === person && prev.chore === chore
-                );
-
-                if (!hadLastCycle || attempts >= this.people.length - 1) {
+            // Find a chore that wasn't assigned to this person in the previous cycle
+            for (const chore of shuffledChores) {
+                if (!prevChores.includes(chore) && !peopleChores[person].includes(chore) && 
+                    !assignments.some(a => a.chore === chore)) {
+                    
                     assignments.push({ person, chore });
                     peopleChores[person].push(chore);
-                    choreAssignments[chore] = person;
-                    assigned = true;
+                    break;
                 }
-                
-                personIndex++;
-                attempts++;
             }
-        });
-
-        // Ensure everyone has at least 2 chores
-        this.people.forEach(person => {
-            while (peopleChores[person].length < 2) {
-                // Find unassigned or reassignable chores
-                const availableChores = this.chores.filter(chore => {
-                    const currentAssignee = choreAssignments[chore];
-                    return !currentAssignee || peopleChores[currentAssignee].length > 2;
-                });
-
-                if (availableChores.length > 0) {
-                    const chore = availableChores[Math.floor(Math.random() * availableChores.length)];
-                    const previousAssignee = choreAssignments[chore];
-                    
-                    if (previousAssignee) {
-                        // Remove from previous assignee
-                        peopleChores[previousAssignee] = peopleChores[previousAssignee].filter(c => c !== chore);
-                        assignments.splice(assignments.findIndex(a => a.person === previousAssignee && a.chore === chore), 1);
+            
+            // If no suitable chore found, just assign any unassigned chore
+            if (peopleChores[person].length === 0) {
+                for (const chore of shuffledChores) {
+                    if (!assignments.some(a => a.chore === chore)) {
+                        assignments.push({ person, chore });
+                        peopleChores[person].push(chore);
+                        break;
                     }
-                    
-                    // Assign to current person
-                    assignments.push({ person, chore });
-                    peopleChores[person].push(chore);
-                    choreAssignments[chore] = person;
-                } else {
-                    break; // No more chores available
                 }
             }
-        });
+        }
+
+        // Second pass: assign second chore to each person
+        for (const person of shuffledPeople) {
+            const prevChores = prevAssignments.get(person) || [];
+            
+            // If person already has 2 chores, skip
+            if (peopleChores[person].length >= 2) continue;
+            
+            // Find a chore that wasn't assigned to this person in the previous cycle
+            for (const chore of shuffledChores) {
+                if (!prevChores.includes(chore) && !peopleChores[person].includes(chore) && 
+                    !assignments.some(a => a.chore === chore)) {
+                    
+                    assignments.push({ person, chore });
+                    peopleChores[person].push(chore);
+                    break;
+                }
+            }
+            
+            // If still no suitable chore found, just assign any unassigned chore
+            if (peopleChores[person].length < 2) {
+                for (const chore of shuffledChores) {
+                    if (!assignments.some(a => a.chore === chore)) {
+                        assignments.push({ person, chore });
+                        peopleChores[person].push(chore);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Check if any chores are left unassigned due to constraints
+        const unassignedChores = shuffledChores.filter(
+            chore => !assignments.some(a => a.chore === chore)
+        );
+
+        // Assign any remaining chores to people with less than 2
+        for (const chore of unassignedChores) {
+            // Find person with fewest chores
+            const person = this.people.reduce((minPerson, p) => 
+                (peopleChores[p].length < peopleChores[minPerson].length) ? p : minPerson
+            , this.people[0]);
+            
+            assignments.push({ person, chore });
+            peopleChores[person].push(chore);
+        }
+
+        // Final check: ensure everyone has exactly 2 chores
+        for (const person of this.people) {
+            // If person has more than 2 chores, remove extras
+            while (peopleChores[person].length > 2) {
+                const choreToRemove = peopleChores[person][peopleChores[person].length - 1];
+                peopleChores[person].pop();
+                
+                const indexToRemove = assignments.findIndex(a => 
+                    a.person === person && a.chore === choreToRemove
+                );
+                
+                if (indexToRemove !== -1) {
+                    assignments.splice(indexToRemove, 1);
+                }
+                
+                // Find person with fewest chores
+                const targetPerson = this.people.reduce((minPerson, p) => 
+                    (peopleChores[p].length < peopleChores[minPerson].length && p !== person) ? p : minPerson
+                , this.people[0] === person ? this.people[1] : this.people[0]);
+                
+                assignments.push({ person: targetPerson, chore: choreToRemove });
+                peopleChores[targetPerson].push(choreToRemove);
+            }
+            
+            // If person has less than 2 chores, this shouldn't happen but handle it
+            while (peopleChores[person].length < 2) {
+                // Find person with most chores
+                const targetPerson = this.people.reduce((maxPerson, p) => 
+                    (peopleChores[p].length > peopleChores[maxPerson].length && p !== person) ? p : maxPerson
+                , this.people[0] === person ? this.people[1] : this.people[0]);
+                
+                if (peopleChores[targetPerson].length <= 2) {
+                    break; // Can't take from anyone else, this is a problem with our data
+                }
+                
+                const choreToMove = peopleChores[targetPerson][peopleChores[targetPerson].length - 1];
+                peopleChores[targetPerson].pop();
+                
+                const indexToMove = assignments.findIndex(a => 
+                    a.person === targetPerson && a.chore === choreToMove
+                );
+                
+                if (indexToMove !== -1) {
+                    assignments[indexToMove].person = person;
+                    peopleChores[person].push(choreToMove);
+                }
+            }
+        }
 
         return assignments.sort((a, b) => a.person.localeCompare(b.person));
-    }
-
-    getPreviousAssignments() {
-        if (this.data.cycles.length === 0) return [];
-        const lastCycle = this.data.cycles[this.data.cycles.length - 1];
-        return lastCycle.assignments || [];
     }
 
     updateAssignmentsDisplay() {
         const container = document.getElementById('assignmentsTable');
         
-        if (!container) {
-            console.error('Assignments table container not found');
-            return;
-        }
-
         if (!this.data.currentCycle) {
             container.innerHTML = '<div class="status status--warning">No assignments generated yet. Click "Generate New Cycle" to start.</div>';
             return;
@@ -393,26 +432,42 @@ class ChoreManager {
             </div>
         `;
 
-        assignments.forEach(assignment => {
-            const completionKey = `${assignment.person}-${assignment.chore}`;
-            const isCompleted = this.data.completions[cycleId]?.[completionKey] || false;
-            const checkboxId = `completion-${completionKey.replace(/[^a-zA-Z0-9]/g, '')}${Date.now()}`;
+        // Group assignments by person
+        const personAssignments = {};
+        for (const assignment of assignments) {
+            if (!personAssignments[assignment.person]) {
+                personAssignments[assignment.person] = [];
+            }
+            personAssignments[assignment.person].push(assignment.chore);
+        }
+
+        // Display assignments grouped by person
+        for (const person of this.people) {
+            const chores = personAssignments[person] || [];
             
-            html += `
-                <div class="assignments-grid">
-                    <div class="person-name">${assignment.person}</div>
-                    <div class="chore-text">${assignment.chore}</div>
-                    <div class="completion-checkbox">
-                        <input type="checkbox" id="${checkboxId}" 
-                               ${isCompleted ? 'checked' : ''}
-                               data-cycle-id="${cycleId}" data-completion-key="${completionKey}">
-                        <label for="${checkboxId}">
-                            ${isCompleted ? '<span class="status status--success">Complete</span>' : '<span class="status status--warning">Pending</span>'}
-                        </label>
+            // Skip if no chores (though everyone should have 2)
+            if (chores.length === 0) continue;
+            
+            for (const chore of chores) {
+                const completionKey = `${person}-${chore}`;
+                const isCompleted = this.data.completions[cycleId]?.[completionKey] || false;
+                
+                html += `
+                    <div class="assignments-grid">
+                        <div class="person-name">${person}</div>
+                        <div class="chore-text">${chore}</div>
+                        <div class="completion-checkbox">
+                            <input type="checkbox" id="completion-${completionKey.replace(/[^a-zA-Z0-9]/g, '')}" 
+                                   ${isCompleted ? 'checked' : ''}
+                                   data-cycle-id="${cycleId}" data-completion-key="${completionKey}">
+                            <label for="completion-${completionKey.replace(/[^a-zA-Z0-9]/g, '')}">
+                                ${isCompleted ? '<span class="status status--success">Complete</span>' : '<span class="status status--warning">Pending</span>'}
+                            </label>
+                        </div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            }
+        }
 
         container.innerHTML = html;
 
@@ -451,42 +506,77 @@ class ChoreManager {
         const personSelect = document.getElementById('violationPerson');
         const choreSelect = document.getElementById('violationChore');
 
-        if (!personSelect || !choreSelect) {
-            console.error('Violation select elements not found');
-            return;
-        }
-
-        // Update person select
+        // Clear current options
         personSelect.innerHTML = '<option value="">Select person...</option>';
+        choreSelect.innerHTML = '<option value="">Select chore...</option>';
+
+        // Add people options
         this.people.forEach(person => {
             personSelect.innerHTML += `<option value="${person}">${person}</option>`;
         });
 
-        // Update chore select with current assignments or all chores if no current cycle
-        choreSelect.innerHTML = '<option value="">Select chore...</option>';
+        // Update chore select with current assignments if we have a current cycle
         if (this.data.currentCycle && this.data.currentCycle.assignments) {
-            this.data.currentCycle.assignments.forEach(assignment => {
-                choreSelect.innerHTML += `<option value="${assignment.chore}">${assignment.chore}</option>`;
+            // Get unique chores from current assignments
+            const currentChores = [...new Set(
+                this.data.currentCycle.assignments.map(a => a.chore)
+            )].sort();
+            
+            // Add chore options
+            currentChores.forEach(chore => {
+                choreSelect.innerHTML += `<option value="${chore}">${chore}</option>`;
             });
         } else {
-            // Show all chores if no current cycle
+            // No current cycle, show all possible chores
             this.chores.forEach(chore => {
                 choreSelect.innerHTML += `<option value="${chore}">${chore}</option>`;
             });
         }
+        
+        // Add event listener to person select to filter chores
+        personSelect.addEventListener('change', () => {
+            const selectedPerson = personSelect.value;
+            
+            // If no person selected or no current cycle, skip
+            if (!selectedPerson || !this.data.currentCycle) return;
+            
+            // Get chores assigned to selected person
+            const personChores = this.data.currentCycle.assignments
+                .filter(a => a.person === selectedPerson)
+                .map(a => a.chore);
+            
+            // Update chore select
+            choreSelect.innerHTML = '<option value="">Select chore...</option>';
+            personChores.forEach(chore => {
+                choreSelect.innerHTML += `<option value="${chore}">${chore}</option>`;
+            });
+        });
     }
 
     addViolation() {
-        const person = document.getElementById('violationPerson')?.value;
-        const chore = document.getElementById('violationChore')?.value;
+        const person = document.getElementById('violationPerson').value;
+        const chore = document.getElementById('violationChore').value;
 
         if (!person || !chore) {
             alert('Please select both a person and a chore.');
             return;
         }
 
+        // Check if this person is assigned this chore in the current cycle
+        let isAssigned = false;
+        if (this.data.currentCycle) {
+            isAssigned = this.data.currentCycle.assignments.some(
+                a => a.person === person && a.chore === chore
+            );
+        }
+
+        if (!isAssigned) {
+            alert(`${person} is not currently assigned to "${chore}". Violations can only be added for current assignments.`);
+            return;
+        }
+
         const violation = {
-            id: Date.now(),
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
             person,
             chore,
             date: new Date().toISOString(),
@@ -504,8 +594,8 @@ class ChoreManager {
     }
 
     removeViolation() {
-        const person = document.getElementById('violationPerson')?.value;
-        const chore = document.getElementById('violationChore')?.value;
+        const person = document.getElementById('violationPerson').value;
+        const chore = document.getElementById('violationChore').value;
 
         if (!person || !chore) {
             alert('Please select both a person and a chore to remove violation.');
@@ -533,14 +623,10 @@ class ChoreManager {
     updateViolationsList() {
         const container = document.getElementById('violationsList');
         
-        if (!container) {
-            console.error('Violations list container not found');
-            return;
-        }
-
-        const currentViolations = this.data.violations.filter(v => 
-            v.cycleId === this.data.currentCycle?.id
-        );
+        // Filter to current cycle if we have one
+        const currentViolations = this.data.currentCycle
+            ? this.data.violations.filter(v => v.cycleId === this.data.currentCycle.id)
+            : this.data.violations;
 
         if (currentViolations.length === 0) {
             container.innerHTML = '<div class="status status--success">No violations recorded.</div>';
@@ -563,7 +649,7 @@ class ChoreManager {
         });
 
         container.innerHTML = html;
-
+        
         // Add event listeners to remove buttons
         container.querySelectorAll('.violation-remove').forEach(button => {
             button.addEventListener('click', (e) => {
@@ -574,7 +660,7 @@ class ChoreManager {
     }
 
     removeViolationById(violationId) {
-        const index = this.data.violations.findIndex(v => v.id == violationId);
+        const index = this.data.violations.findIndex(v => v.id === violationId);
         if (index !== -1) {
             this.data.violations.splice(index, 1);
             this.saveData();
@@ -587,11 +673,6 @@ class ChoreManager {
         const content = document.getElementById('futureCyclesContent');
         const icon = document.getElementById('toggleIcon');
         
-        if (!content || !icon) {
-            console.error('Future cycles elements not found');
-            return;
-        }
-
         if (content.classList.contains('hidden')) {
             content.classList.remove('hidden');
             icon.textContent = '▲';
@@ -604,17 +685,18 @@ class ChoreManager {
 
     generateFutureCycles() {
         const container = document.getElementById('futureCyclesTable');
-        
-        if (!container) {
-            console.error('Future cycles table container not found');
-            return;
-        }
-
         const cycles = [];
         
-        // Generate 26 bi-weekly cycles (1 year)
-        let currentStart = new Date(this.nextCycleStart);
+        // Determine starting date for future cycles
+        let currentStart;
+        if (this.data.currentCycle) {
+            currentStart = new Date(this.data.currentCycle.startDate);
+            currentStart.setDate(currentStart.getDate() + 14); // Start from next cycle
+        } else {
+            currentStart = new Date(this.nextCycleStart);
+        }
         
+        // Generate 26 bi-weekly cycles (1 year)
         for (let i = 0; i < 26; i++) {
             const start = new Date(currentStart);
             const end = new Date(start);
@@ -678,26 +760,19 @@ class ChoreManager {
         
         const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 100;
 
-        const totalCyclesEl = document.getElementById('totalCycles');
-        const totalViolationsEl = document.getElementById('totalViolations');
-        const completionRateEl = document.getElementById('completionRate');
-
-        if (totalCyclesEl) totalCyclesEl.textContent = totalCycles;
-        if (totalViolationsEl) totalViolationsEl.textContent = totalViolations;
-        if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
+        document.getElementById('totalCycles').textContent = totalCycles;
+        document.getElementById('totalViolations').textContent = totalViolations;
+        document.getElementById('completionRate').textContent = `${completionRate}%`;
 
         // Update personal statistics
         this.updatePersonalStats();
+        
+        // Update days remaining
+        document.getElementById('daysRemaining').textContent = `${this.calculateDaysRemaining()} days`;
     }
 
     updatePersonalStats() {
         const container = document.getElementById('personalStats');
-        
-        if (!container) {
-            console.error('Personal stats container not found');
-            return;
-        }
-
         const personStats = {};
 
         // Initialize stats for each person
@@ -705,19 +780,20 @@ class ChoreManager {
             personStats[person] = {
                 totalTasks: 0,
                 completedTasks: 0,
-                violations: 0
+                violations: 0,
+                completionRate: 100
             };
         });
 
         // Count tasks and completions
-        this.data.cycles.forEach(cycle => {
-            cycle.assignments?.forEach(assignment => {
-                const person = assignment.person;
-                personStats[person].totalTasks++;
-                
-                const completionKey = `${assignment.person}-${assignment.chore}`;
-                if (this.data.completions[cycle.id]?.[completionKey]) {
-                    personStats[person].completedTasks++;
+        Object.entries(this.data.completions).forEach(([cycleId, completions]) => {
+            Object.entries(completions).forEach(([key, isCompleted]) => {
+                const [person] = key.split('-');
+                if (personStats[person]) {
+                    personStats[person].totalTasks++;
+                    if (isCompleted) {
+                        personStats[person].completedTasks++;
+                    }
                 }
             });
         });
@@ -729,6 +805,26 @@ class ChoreManager {
             }
         });
 
+        // Calculate completion rates
+        Object.keys(personStats).forEach(person => {
+            const stats = personStats[person];
+            stats.completionRate = stats.totalTasks > 0 
+                ? Math.round((stats.completedTasks / stats.totalTasks) * 100) 
+                : 100;
+        });
+
+        // Sort people by completion rate (highest first) and then by violations (lowest first)
+        const sortedPeople = [...this.people].sort((a, b) => {
+            const statsA = personStats[a];
+            const statsB = personStats[b];
+            
+            if (statsA.completionRate !== statsB.completionRate) {
+                return statsB.completionRate - statsA.completionRate;
+            }
+            
+            return statsA.violations - statsB.violations;
+        });
+
         let html = `
             <h4>Personal Performance</h4>
             <div class="person-stat">
@@ -738,16 +834,27 @@ class ChoreManager {
             </div>
         `;
 
-        this.people.forEach(person => {
+        // Show stats for each person, sorted by performance
+        sortedPeople.forEach(person => {
             const stats = personStats[person];
-            const rate = stats.totalTasks > 0 ? 
-                Math.round((stats.completedTasks / stats.totalTasks) * 100) : 100;
+            const rateClass = stats.completionRate >= 90 
+                ? 'status--success' 
+                : (stats.completionRate >= 70 ? 'status--warning' : 'status--error');
+                
+            const violationClass = stats.violations === 0 
+                ? 'status--success' 
+                : (stats.violations <= 2 ? 'status--warning' : 'status--error');
             
             html += `
                 <div class="person-stat">
                     <div>${person}</div>
-                    <div>${rate}% (${stats.completedTasks}/${stats.totalTasks})</div>
-                    <div>${stats.violations}</div>
+                    <div>
+                        <span class="status ${rateClass}">${stats.completionRate}%</span>
+                        <small>(${stats.completedTasks}/${stats.totalTasks})</small>
+                    </div>
+                    <div>
+                        <span class="status ${violationClass}">${stats.violations}</span>
+                    </div>
                 </div>
             `;
         });
@@ -776,10 +883,7 @@ class ChoreManager {
     }
 
     importData() {
-        const fileInput = document.getElementById('importFileInput');
-        if (fileInput) {
-            fileInput.click();
-        }
+        document.getElementById('importFileInput').click();
     }
 
     async handleFileImport(event) {
@@ -790,7 +894,11 @@ class ChoreManager {
             const text = await file.text();
             const importedData = JSON.parse(text);
             
-            if (importedData.cycles && importedData.violations !== undefined) {
+            // Validate the imported data
+            if (importedData.cycles !== undefined && 
+                importedData.violations !== undefined &&
+                importedData.completions !== undefined) {
+                
                 this.data = { ...this.data, ...importedData };
                 await this.saveData();
                 this.updateUI();
@@ -808,76 +916,125 @@ class ChoreManager {
 
     generateGitHubFile() {
         const button = document.getElementById('generateGithubFileBtn');
-        
-        if (button) {
-            button.classList.add('loading');
-            button.disabled = true;
-        }
+        button.classList.add('loading');
+        button.disabled = true;
 
         setTimeout(() => {
-            try {
-                const githubData = {
-                    metadata: {
-                        lastUpdated: new Date().toISOString(),
-                        version: "1.0",
-                        cycleNumber: this.data.cycles.length + 1,
-                        description: "Bi-weekly chore assignments for Shabbat cleanup"
-                    },
-                    currentCycle: this.data.currentCycle,
-                    completions: this.data.currentCycle ? 
-                        this.data.completions[this.data.currentCycle.id] : {},
-                    settings: {
-                        cycleLength: 14,
-                        minChoresPerPerson: 2,
-                        maxChoresPerPerson: 3,
-                        cycleStartDay: "Tuesday",
-                        deadlineDay: "Friday",
-                        timezone: "America/New_York"
-                    },
-                    stats: {
-                        totalCycles: this.data.cycles.length,
-                        totalViolations: this.data.violations.length,
-                        activeAssignments: this.data.currentCycle?.assignments?.length || 0
+            // If no current cycle, create a template one for GitHub
+            const currentCycle = this.data.currentCycle || {
+                id: `cycle-${new Date().toISOString().split('T')[0]}`,
+                startDate: this.nextCycleStart,
+                endDate: this.nextCycleDeadline,
+                assignments: []
+            };
+
+            // Format assignments by person for GitHub format
+            const personAssignments = [];
+            const peopleChores = {};
+            
+            // If we have assignments, group them
+            if (currentCycle.assignments && currentCycle.assignments.length > 0) {
+                // Group chores by person
+                currentCycle.assignments.forEach(assignment => {
+                    if (!peopleChores[assignment.person]) {
+                        peopleChores[assignment.person] = [];
                     }
-                };
-
-                const blob = new Blob([JSON.stringify(githubData, null, 2)], 
-                    { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'current-chore-data.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                // Show instructions
-                const instructions = document.getElementById('githubInstructions');
-                if (instructions) {
-                    instructions.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Error generating GitHub file:', error);
-                alert('Error generating GitHub file: ' + error.message);
-            } finally {
-                if (button) {
-                    button.classList.remove('loading');
-                    button.disabled = false;
-                }
+                    peopleChores[assignment.person].push(assignment.chore);
+                });
+            } else {
+                // Create empty assignments for GitHub template
+                this.people.forEach(person => {
+                    peopleChores[person] = [];
+                });
             }
+            
+            // Format into GitHub-compatible structure
+            for (const person of this.people) {
+                const chores = peopleChores[person] || [];
+                
+                // Count violations for this person in current cycle
+                const violations = this.data.violations.filter(
+                    v => v.person === person && v.cycleId === currentCycle.id
+                ).length;
+                
+                // Check if all chores are completed
+                const allCompleted = chores.length > 0 ? chores.every(chore => {
+                    const key = `${person}-${chore}`;
+                    return this.data.completions[currentCycle.id]?.[key] || false;
+                }) : false;
+                
+                personAssignments.push({
+                    person,
+                    chores: chores.length > 0 ? chores : ["No chores assigned yet"],
+                    completed: allCompleted,
+                    violations,
+                    lastCompleted: allCompleted ? new Date().toISOString() : null
+                });
+            }
+
+            // Create next cycles data (future cycles)
+            const nextCycles = [];
+            let nextStart = new Date(currentCycle.startDate);
+            for (let i = 0; i < 3; i++) {
+                nextStart = new Date(nextStart);
+                nextStart.setDate(nextStart.getDate() + 14);
+                
+                const nextEnd = new Date(nextStart);
+                nextEnd.setDate(nextEnd.getDate() + 3);
+                
+                nextCycles.push({
+                    cycleNumber: (this.data.cycles.length || 0) + i + 1,
+                    startDate: nextStart.toISOString().split('T')[0],
+                    deadlineDate: nextEnd.toISOString().split('T')[0]
+                });
+            }
+            
+            const githubData = {
+                metadata: {
+                    lastUpdated: new Date().toISOString(),
+                    version: "1.0",
+                    cycleNumber: this.data.cycles.length || 1,
+                    description: "Bi-weekly chore assignments for Shabbat cleanup"
+                },
+                currentCycle: {
+                    id: currentCycle.id,
+                    startDate: (currentCycle.startDate instanceof Date ? currentCycle.startDate : new Date(currentCycle.startDate)).toISOString().split('T')[0],
+                    deadlineDate: (currentCycle.endDate instanceof Date ? currentCycle.endDate : new Date(currentCycle.endDate)).toISOString().split('T')[0],
+                    type: "bi-weekly",
+                    assignments: personAssignments
+                },
+                settings: {
+                    cycleLength: 14,
+                    minChoresPerPerson: 2,
+                    maxChoresPerPerson: 2,
+                    cycleStartDay: "Tuesday",
+                    deadlineDay: "Friday",
+                    timezone: "America/New_York"
+                },
+                nextCycles: nextCycles
+            };
+
+            const blob = new Blob([JSON.stringify(githubData, null, 2)], 
+                { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'current-chore-data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show instructions
+            document.getElementById('githubInstructions').classList.remove('hidden');
+
+            button.classList.remove('loading');
+            button.disabled = false;
         }, 300);
     }
 
     updateUI() {
-        // Update dates display
-        const daysRemaining = this.calculateDaysRemaining();
-        const daysRemainingEl = document.getElementById('daysRemaining');
-        if (daysRemainingEl) {
-            daysRemainingEl.textContent = `${daysRemaining} days`;
-        }
-        
         // Update all UI components
         this.updateAssignmentsDisplay();
         this.updateViolationSelects();
@@ -886,18 +1043,11 @@ class ChoreManager {
     }
 }
 
-// Initialize the application when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded, initializing ChoreManager...');
-    
-    try {
-        window.choreManager = new ChoreManager();
-        await window.choreManager.init();
-    } catch (error) {
-        console.error('Failed to initialize ChoreManager:', error);
-        // Try basic initialization without advanced features
-        window.choreManager = new ChoreManager();
-        window.choreManager.setupEventListeners();
-        window.choreManager.updateUI();
-    }
+// Initialize the application
+let choreManager;
+
+document.addEventListener('DOMContentLoaded', () => {
+    choreManager = new ChoreManager();
+    // Make it globally available for certain functions
+    window.choreManager = choreManager;
 });
