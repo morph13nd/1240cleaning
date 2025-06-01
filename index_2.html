@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bi-Weekly Chore Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="py-16">
+            <h1>Bi-Weekly Chore Manager</h1>
+            <p class="text-secondary mt-8">Shabbat Cleanup Assignments & Tracking</p>
+        </header>
+
+        <!-- Statistics Overview -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Statistics Overview</h2>
+            </div>
+            <div class="card__body">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <label>Current Cycle</label>
+                        <span id="current-cycle-number">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>Last Updated</label>
+                        <span id="last-updated">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>Active Violations</label>
+                        <span id="active-violations-count">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <label>Overall Completion Rate</label>
+                        <span id="overall-completion-rate">-</span>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-wrapper">
+                        <h4>Completion Rates by Person</h4>
+                        <div class="chart-container">
+                            <canvas id="completion-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <h4>Violation Counts by Person</h4>
+                        <div class="chart-container">
+                            <canvas id="violation-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Cycle Info -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Current Cycle Information</h2>
+            </div>
+            <div class="card__body">
+                <div class="cycle-dates">
+                    <div class="date-item">
+                        <label>Start Date</label>
+                        <span id="cycle-start-date">-</span>
+                    </div>
+                    <div class="date-item">
+                        <label>End Date</label>
+                        <span id="cycle-end-date">-</span>
+                    </div>
+                    <div class="date-item">
+                        <label>Days Remaining</label>
+                        <span id="days-remaining" class="status status--info">-</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Assignments -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Current Assignments</h2>
+            </div>
+            <div class="card__body">
+                <div id="assignments-container">
+                    <div class="loading">Loading assignments...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Violation Management -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Violation Management</h2>
+            </div>
+            <div class="card__body">
+                <p>Add or remove violations for incomplete chores.</p>
+                
+                <form id="violation-form" class="violation-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="violation-person">Person</label>
+                            <select id="violation-person" class="form-control" required>
+                                <option value="">Select person...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="violation-chore">Chore</label>
+                            <select id="violation-chore" class="form-control" required>
+                                <option value="">Select chore...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="violation-date">Date</label>
+                            <input type="datetime-local" id="violation-date" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn btn--primary">Add Violation</button>
+                        <button type="button" class="btn btn--secondary" id="remove-violation-btn">Remove Violation</button>
+                    </div>
+                </form>
+                
+                <div class="violations-list">
+                    <h3>Active Violations</h3>
+                    <div id="active-violations-container">
+                        <div class="loading">Loading violations...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cycle Generation -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Cycle Generation</h2>
+            </div>
+            <div class="card__body">
+                <p>Generate a new cycle of chores. Each person will get different chores than their previous cycle.</p>
+                <button id="generate-cycle-btn" class="btn btn--primary">Generate New Cycle</button>
+                <div id="generation-result" class="mt-8 hidden"></div>
+            </div>
+        </section>
+
+        <!-- Previous Cycles -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Previous Cycles</h2>
+            </div>
+            <div class="card__body">
+                <div id="previous-cycles-container">
+                    <div class="loading">Loading previous cycles...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Import/Export -->
+        <section class="card mb-8">
+            <div class="card__header">
+                <h2>Import/Export Data</h2>
+            </div>
+            <div class="card__body">
+                <p>Backup or restore chore data.</p>
+                <div class="button-group">
+                    <button id="export-btn" class="btn btn--secondary">Export Data</button>
+                    <button id="import-btn" class="btn btn--secondary">Import Data</button>
+                    <button id="github-export-btn" class="btn btn--primary">Export to GitHub</button>
+                </div>
+                <input type="file" id="import-file" accept=".json" class="hidden">
+                <div id="import-export-status" class="mt-8 hidden"></div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>Bi-Weekly Chore Manager | Cycle Length: 14 days | Deadline: Friday</p>
+            <p>Last synchronized: <span id="last-sync">-</span></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

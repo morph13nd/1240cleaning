@@ -1,3 +1,8 @@
+/**
+ * Bi-Weekly Chore Manager
+ * Fixed version with proper violation tracking and cycle management
+ */
+
 class ChoreManager {
     constructor() {
         this.data = this.getDefaultData();
@@ -500,7 +505,7 @@ class ChoreManager {
                         <input type="checkbox" 
                                id="${key}" 
                                ${completed ? 'checked' : ''}
-                               onchange="choreManager.toggleChoreCompletion('${key}')">
+                               onclick="choreManager.toggleChoreCompletion('${key}')">
                         <label for="${key}">${assignment.chore}</label>
                     </div>
                 `;
@@ -528,7 +533,7 @@ class ChoreManager {
         this.data.metadata.lastUpdated = new Date().toISOString();
         
         console.log('Toggled completion for:', key, this.data.currentCycle.completions[key]);
-        this.renderStatistics(); // Update stats
+        this.renderAll();
     }
 
     renderViolations() {
@@ -563,7 +568,7 @@ class ChoreManager {
             return;
         }
 
-        const html = this.data.previousCycles.reverse().map((cycle, index) => {
+        const html = this.data.previousCycles.slice().reverse().map((cycle, index) => {
             const startDate = new Date(cycle.startDate).toLocaleDateString();
             const endDate = new Date(cycle.endDate).toLocaleDateString();
             const totalAssignments = cycle.assignments ? cycle.assignments.length : 0;
@@ -606,9 +611,15 @@ document.addEventListener('DOMContentLoaded', () => {
     window.choreManager = new ChoreManager();
 });
 
-// Global function for checkbox changes (needed for inline onclick)
-function toggleChoreCompletion(key) {
-    if (window.choreManager) {
+// Make toggle function globally available for onclick handlers
+window.choreManager = {};
+window.choreManager.toggleChoreCompletion = function(key) {
+    if (window.choreManager instanceof ChoreManager) {
         window.choreManager.toggleChoreCompletion(key);
     }
-}
+};
+window.choreManager.removeViolation = function(id) {
+    if (window.choreManager instanceof ChoreManager) {
+        window.choreManager.removeViolation(id);
+    }
+};
